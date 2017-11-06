@@ -31,11 +31,17 @@ require(slam)
 
 #map
 require(leaflet)
+
+
+
+require(igraph)
 ```
 
 Note that I made extensive use of data.table to extract, filter, process the data as that's the method that I'm most conformable with.
 
 # Data Input
+
+The following are data provided by Kaggle
 
 ```{r}
 
@@ -57,6 +63,18 @@ schema <- as.data.table(read.csv(file="schema.csv", strip.white = TRUE,
 
 ```
 
+Some custom data that I used
+
+```{r}
+## Rcurl into data method
+# library(RCurl)
+# x <- getURL("https://gist.githubusercontent.com/marcusbaguley/304261/raw/0ab501897ce32fcd3aecd748b74686a20ada9036/Country%2520Currency%2520Code%2520Mappings")
+# y <- read.csv(text = x)
+
+## Reading downloaded csv method
+currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
+```
+
 # Function
 
 ```{r}
@@ -64,21 +82,51 @@ schema <- as.data.table(read.csv(file="schema.csv", strip.white = TRUE,
 MultipleChoice_func = function(question, dt = multipleChoiceResponses){
   
   setDT(dt) %>%
-    #since the dt contained column with similar name, selecting only these column
+    # since the dt contained column with similar name, selecting only these column
     .[, colnames(.) %like% question, with=FALSE] %>%
     # melting wide data into long data
     melt(.,measure.vars=patterns(question), na.rm = TRUE, variable.name=question) %>%
     # Shortening the str with str_extract
     .[, eval(question):=str_extract(get(question), paste0("(?<=",eval(question),")([A-Za-z])*"))] %>%
     # Aggregate the counts
-    .[,.N, by=c(eval(question), "value")] 
-  # The output should be plotted and processed
+    .[,.N, by=c(eval(question), "value")] %>%
+  # The output should be plotted and processed, the numbers are already aggregated
+    .[order(-N)]
+}
+
+# For some survey question that allow multiple choices ( select all that apply), the results are stored in a str list that seperated by ",", this function serve to extract it
+MultipleChoiceOptions_func = function(question, dt = multipleChoiceResponses){
+  
+  # Turning this column into characters
+  dt[, (question):= lapply(.SD, as.character ), .SDcols = question ]
+  
+  # I couldn't get there expresssion to change to with as.character nicely
+  # `$`(df , question)<-as.character(`$`(df , question))
+  # dt[,get(question)] <- as.character(dt[,get(question)])
+  
+  # Detecting the appropriate number of split
+  t.splits <- max(lengths(strsplit(dt[,get(question)], '\\([^)]+,(*SKIP)(*FAIL)|,\\s*', 
+                                   perl = TRUE)))
+  
+  # t.splits
+  t.test <- dt[,.(get(question))] %>%
+    .[, paste0("m.", eval(question),
+               1:t.splits):=tstrsplit(V1,
+                                      '\\([^)]+,(*SKIP)(*FAIL)|,\\s*',
+                                      perl = TRUE)] %>%
+    .[, colnames(.) %like% "m.*", with=FALSE] %>%
+    melt(.,  measure.vars = patterns("^m.*"), na.rm = T) %>% #note that na is removed
+  # This output two column by default, with value column correspodings to the individual strings. Should be processed use with aggregation.
+        # Aggregate the counts
+    .[,.N, by=c("value")] %>%
+  # The output should be plotted and processed, the numbers are already aggregated
+    .[order(-N)]
 }
 
 Wordclourd_func = function(input, dt = freeformResponses){
   
-  #creating a document-feature matrix
-  dfm.txt <-dfm(eval(dt)[!is.na(get(input)), get(input)],
+  # Creating a document-feature matrix
+  dfm.txt <- dfm(eval(dt)[!is.na(get(input)), get(input)],
                 remove=stopwords("english"),
                 remove_symbols = T,
                 remove_punct = T,
@@ -93,23 +141,20 @@ Wordclourd_func = function(input, dt = freeformResponses){
   word_freqs <- data.frame(term = names(term_frequency), num = term_frequency)
   word_freqs
   
-  # for starters, word_freqs can be processed with wordcloud and barplot
+  # for starters, word_freqs(basically a df with terms and its frequency) can be processed with wordcloud and barplot
 }
-
-
 
 ```
 
+# Basic visualisation
 
+This section depicts the some basic plots of survey, which could be used to explore the cross section data analysis with it's tabbed structure. 
 
-# Number of survey respondent with respect to Countries 
+Initially,  I intended to look at into Pay vs Experience and Demographics of countries, but it has since grown up a bit.
+
+## Countries 
+
 ```{r}
-# t_gender_country <- multipleChoiceResponses %>%
-#   .[,.N, by = c("GenderSelect","Country")]
-# hchart(t_gender_country, "column", hcaes(x = Country, y = N, group =GenderSelect))
-
-
-
 # Merging the records of country for China
 # in the raw data, China seems to be recorded as "People 's Republic of China", "Republic of China"
 multipleChoiceResponses<-multipleChoiceResponses[grep("China",Country), Country:= "China"]
@@ -128,10 +173,13 @@ hchart(fct_infreq(multipleChoiceResponses$Country), "column") %>%
   hc_xAxis(text = "Countries", labels = list(rotation = 90))
   
 ```
+Merged the records of country for China (People 's Republic of China", "Republic of China). Also,  there are seperate entries for selection of Taiwan and Hong Kong. So while it may vary depending on your definition, the sum of the three entries would make it the third countries with most survey respondents, just after India.
 
 Overall, the majority of the surveyed users are living in US and India. Interestingly, many users also selected "Others" categories ( Or perhaps their country is less represented in the data). Given that this is the survey result on Kaggle, this is probably little surprise. There might exist other data science platforms that are more popular in Other countries, especially if that country favor another language(China, Japan, Germany).
 
-# Tenure
+## Tenure
+
+Tenure can probably be related to Working Experience, although, given that the question of tenure is directed to all,, this is a hazy indicator given that some might include their years of coding in their education (which typically isn't included in the years of working experience). There is no better alternative in exploring working experience though.
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$Tenure), "column")%>%
@@ -140,10 +188,23 @@ hchart(fct_infreq(multipleChoiceResponses$Tenure), "column")%>%
                            eval(schema[Column=="Tenure", Question])
                            ))
 
+# Create a numeric column indicative of current tenure selections
+# essentially a host of if, then case to set a numeric value fr m.Tenure
+multipleChoiceResponses %>%
+  .[Tenure=="3 to 5 years", m.Experience :=4] %>%
+  .[Tenure=="6 to 10 years", m.Experience :=8] %>%
+  .[Tenure=="1 to 2 years", m.Experience :=2] %>%
+  .[Tenure=="More than 10 years", m.Experience :=12]%>% 
+  #~hand wavingly, though data science being a relatively young field and that the majority of survey user are in their late 20s or early 30, this figures should be alright
+  .[Tenure=="Less than a year", m.Experience :=0] %>%
+  .[Tenure=="I don't write code to analyze data", m.Experience :=NA]
+# perhaps these people rely on tableau and the likes, in any case, this field would not be indicate of their experience in their profession, removing it
+
+## check
+# unique(multipleChoiceResponses[,.(m.Experience, Tenure)])
 ```
 
-Note that the question of tenure is directed to all, some students may have included their years of doing analysis in Education (university experiments etc), so this is probably not the best indicative of working exprerience.
-
+## Code Writer 
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$CodeWriter), "column")%>%
@@ -156,8 +217,7 @@ hchart(fct_infreq(multipleChoiceResponses$CodeWriter), "column")%>%
 Interestingly, about one third of people dont work with codes. I can only think of three posible reasons, one is that they are moved up into project management roles that dont require them to work with codes. Second, they working in more of a analyst role dealing with the likes of tableau/excel or other data analyst software that dont require codes. Alternatively, it is possible that they are working in another field, and are looking to break into data science.
 
 
-
-# Job Title
+## Job Title
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$CurrentJobTitleSelect), "column")%>%
@@ -179,7 +239,53 @@ AggrJobTitle <- multipleChoiceResponses %>%
 Evidently, Data Scientist, Software Developer, Data analyst and Scientist/Researh are most popular. I  am puzzle by what is the difference between Scientist/Research and Research (Maybe Education might shed a light?), perhaps they should be aggregated into a single option? Though in that case they will be the 3rd most popular job title, even before Data analyst
 
 
-# Age
+
+## Past Job title
+
+###Select
+
+```{r}
+t.WTF <- MultipleChoiceOptions_func("PastJobTitlesSelect")
+  
+hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         hc_title(text = "PastJobTitlesSelect") %>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="PastJobTitlesSelect", Asked]),"]",
+                                  eval(schema[Column=="PastJobTitlesSelect", Question])
+         ))
+
+```
+ 
+### FreeForm
+
+```{r}
+## freeformResponse
+# colnames(freeformResponses)
+nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
+# 2094
+
+t.WTF<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
+  .[order(-num)] %>%
+  .[num>20,]
+
+hchart(t.WTF, type="column", hcaes(x = term, y = num))
+```
+
+## Job Factor
+
+```{r}
+t.WTF <-MultipleChoice_func("JobFactor")
+
+hchart(t.WTF, type="column", hcaes(x = JobFactor, y = N, group = value),
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         hc_title(text = "JobFactor") 
+
+
+```
+ The Majority learners seems to think that their Job title are a somewat important. Although surprisingly, not all of the learners hold job title in an important place
+
+## Age
 
 ```{r}
 hchart(multipleChoiceResponses$Age, na.rm =T)%>%
@@ -189,7 +295,7 @@ hchart(multipleChoiceResponses$Age, na.rm =T)%>%
                            ))
 ```
 
-As noted by other kernal, the respondents of the survey are young, most likely in their mid 20s.
+As noted by other kernals, most the respondents of the survey are young, most likely in their mid 20s.
 
 ```{r}
 # highchart() %>%
@@ -221,7 +327,230 @@ As noted by other kernal, the respondents of the survey are young, most likely i
 #       ))))
 ```
 
-# Codes & Job Title
+## Career Switcher
+
+```{r}
+hchart(fct_infreq(multipleChoiceResponses$CareerSwitcher), na.rm =T,
+       options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+    hc_title(text = "CareerSwitcher") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="CareerSwitcher", Asked]),"]",
+                           eval(schema[Column=="CareerSwitcher", Question])
+                           ))
+```
+
+## Salary Change
+
+```{r}
+hchart(fct_infreq(multipleChoiceResponses$SalaryChange), na.rm =T,
+       options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
+    hc_title(text = "SalaryChange") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="SalaryChange", Asked]),"]",
+                           eval(schema[Column=="SalaryChange", Question])
+                           ))
+```
+
+wow, most people saw a 20% increase in salary over 3 years. Guess Data science is indeed a field in demand.
+
+
+
+## Remote Work
+
+```{r}
+hchart(multipleChoiceResponses$RemoteWork, na.rm =T)%>%
+    hc_title(text = "RemoteWork") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="RemoteWork", Asked]),"]",
+                           eval(schema[Column=="RemoteWork", Question])
+                           ))
+```
+
+## Currency
+
+Sadly, the conversionRates provided gave only "OriginCountry" (USD, EUR, AUD etc) and "conversionRates"  (in numerics with USD as base line). I find the "OriginCountry" to be somewat misleading, as it is more of a Currency Code than Country.
+
+One will have to relate that to Country Name before joining the ConversionRates into multipleChoiceResponses. The following codes attempts several joins
+
+conversionRates -> currency2CountryName -> multipleChoiceResponses
+(where -> = join into ).
+
+```{r}
+# # Cleaning up Conversion Rates, removing X which seems to be a raw ID
+conversionRates$X=NULL
+
+# # Renaming conversionRates to facillate easier join
+colnames(conversionRates) <- c("Code", "ExchangeRate")
+
+# # joining currency2CountryName and conversionRates together
+Currency2CountryConversion <- currency2CountryName[conversionRates, on=.(Code)]
+
+# # Converting country code into character
+# # Currency2CountryConversion$CountryCode <- as.character(Currency2CountryConversion$CountryCode)
+multipleChoiceResponses$CompensationAmount <- as.numeric(as.character(multipleChoiceResponses$CompensationAmount))
+
+# # It seems Currency2CountryConversion has some NA/nonunique value for Country Name and Code
+# glimpse(unique(Currency2CountryConversion[is.na(Country)]))
+# $ Country      <fctr> NA, NA, NA, NA
+# $ CountryCode  <fctr> NA, NA, NA, NA
+# $ Currency     <fctr> NA, NA, NA, NA
+# $ Code         <fctr> RSD, BAM, BYN, GHS
+# $ ExchangeRate <dbl> 0.010020, 0.611383, 0.518071, 0.225710
+# # Removing them as this will cause duplicates when merging
+Currency2CountryConversion <- Currency2CountryConversion[!is.na(Country)]
+
+# # Combining the main dt with Currency2Country
+multipleChoiceResponses <- Currency2CountryConversion[] %>%
+  .[multipleChoiceResponses, on=.(Country)] %>%
+  # # Create a column that account for the conversion rate of local currencies
+  .[!is.na(CompensationAmount), m.CompensationLocal:= CompensationAmount * ExchangeRate]
+
+# # Changing columns into as.character to facillitate comparison for later section
+multipleChoiceResponses[, c("Code", "CompensationCurrency"):=lapply(.SD, as.character), .SDcols=c("Code", "CompensationCurrency")]
+
+# class(multipleChoiceResponses$CompensationCurrency)
+
+# Comparison
+# unique(multipleChoiceResponses[CompensationCurrency==Code,.(CompensationCurrency, Code)])
+```
+
+## Learning Platform Select
+```{r}
+schema[Column=="LearningPlatformSelect", Question]
+
+t.WTF <- MultipleChoiceOptions_func("LearningPlatformSelect") 
+
+
+hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         hc_title(text = "LearningPlatformUsefulness") %>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="LearningPlatformSelect", Asked]),"]",
+                                  eval(schema[Column=="LearningPlatformSelect", Question])
+                                  ))
+
+
+```
+
+## Learning Platform Usefulness
+
+```{r}
+schema[Column=="LearningPlatformUsefulness", Question]
+
+t.WTF <- MultipleChoice_func("LearningPlatformUsefulness") 
+
+hchart(t.WTF, type="column", hcaes(x = LearningPlatformUsefulness, y = N, group = value),
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         hc_title(text = "LearningPlatformUsefulness") 
+         # hc_subtitle(text = paste("Q",
+         #                          "[",eval(schema[Column=="LearningPlatformUsefulness", Asked]),"]",
+         #                          eval(schema[Column=="LearningPlatformUsefulness", Question])
+         # ))
+```
+
+## Work tools Frequency
+
+```{r}
+t.WTF <- MultipleChoice_func("WorkToolsFrequency") 
+hchart(t.WTF, type="column", hcaes(x = WorkToolsFrequency, y = N, group = value))
+```
+
+## Proving your worth for learners
+
+
+```{r}
+t.WTF <- MultipleChoice_func("ProveKnowledge") 
+hchart(t.WTF, type="column", hcaes(x = ProveKnowledge, y = N, group = value))%>%
+    hc_title(text = "ProveKnowledge") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="ProveKnowledgeSelect", Asked]),"]",
+                           eval(schema[Column=="ProveKnowledgeSelect", Question])
+                           ))
+```
+
+Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to free writing this.
+
+
+## Algorithm Understanding
+
+```{r}
+t.WTF <- MultipleChoice_func("AlgorithmUnderstandingLevel") 
+hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value)) %>%
+    hc_title(text = "AlgorithmUnderstandingLevel") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="AlgorithmUnderstandingLevel", Asked]),"]",
+                           eval(schema[Column=="AlgorithmUnderstandingLevel", Question])
+                           ))
+
+```
+
+
+
+# Interesting combination
+
+## Network Graph of Career Change
+If we draw a network graph assuming therea connection between past job(s) and current job.
+
+```{r}
+
+# Making sure that this column is in characters
+JobNetworkPlot_dt <- multipleChoiceResponses[, PastJobTitlesSelect:=lapply(.SD, as.character ), .SDcols = c("PastJobTitlesSelect") ] %>%
+  # Selecting only relevent columns of "CurrentJobTitleSelect" and "PastJobTitlesSelect"
+  .[,colnames(.) %in% c("PastJobTitlesSelect", "CurrentJobTitleSelect"), with = FALSE] 
+
+# CareerSwitcher
+
+t.splits <- max(lengths(strsplit(JobNetworkPlot_dt$PastJobTitlesSelect, '\\([^)]+,(*SKIP)(*FAIL)|,\\s*', perl = TRUE)))
+
+t.test123 <- JobNetworkPlot_dt %>%
+  # There are respondents that gave a list of previous job titles, yet did not have their current job title recorded, the past job titles select would still hold valueble data. For these people,chanaging their Current JobTitle to "Not Given" 
+  .[is.na(CurrentJobTitleSelect), CurrentJobTitleSelect:="Not given"] %>%
+  # strsplit the past job title select base on ","
+  .[, paste0("m.PastJobTitlesSelect",
+             1:t.splits):=tstrsplit(PastJobTitlesSelect,
+                                    '\\([^)]+,(*SKIP)(*FAIL)|,\\s*',
+                                    perl = TRUE)] %>%
+  melt(.,  measure.vars = patterns("^m.*"), na.rm = T) %>%
+    # Removing those who arent/ havent start working
+    .[!value=="I haven't started working yet"] %>%
+  .[,(colnames(.) %in% c("CurrentJobTitleSelect", "value")),with = F] %>%
+  .[,list(weight=.N), by = c("CurrentJobTitleSelect", "value")]
+
+  
+  ## make graph
+# g <- graph_from_edgelist(t.test123, directed=FALSE)
+
+net<-graph_from_data_frame(d=t.test123,directed=T) 
+
+net <- simplify(net, remove.multiple = F, remove.loops = T) 
+
+plot(net, edge.arrow.size=.4,vertex.label=NA)
+
+plot(net, edge.arrow.size=.4,layout=layout_in_circle, vertex.label=NA, edge.width=E(net)$weight/200)
+
+plot(net, edge.arrow.size=.4,layout=layout_in_star, vertex.label=NA, edge.width=E(net)$weight/200)
+
+```
+
+```{r}
+  net <- simplify(net, remove.multiple = F, remove.loops = T) 
+```
+
+
+
+## Currency & Remote work
+Having combined the the compensation currency and currency code for supposed country that the respondents are living, I wonder if all these people who are receiving foreign currency were doing mostly remove work?
+
+```{r}
+t.WTF<-multipleChoiceResponses[!is.na(CompensationCurrency)& CompensationCurrency!= Code,
+                               .N, 
+                               by=c("RemoteWork", "Country")] %>%
+  .[order(-RemoteWork)]
+
+
+hchart(t.WTF, type="column", hcaes(x = Country, y = N, group = RemoteWork)) %>%
+hc_title(text = "Currency & Remote work") 
+
+
+```
+
+
+## Codes & Job Title
 
 ```{r}
 t.WTF<-multipleChoiceResponses[!is.na(CurrentJobTitleSelect)] %>%
@@ -239,6 +568,7 @@ In case for Business Analyst and Data Analyst, the amount of non coders could ma
 
 
 ## Deeper water
+
 Lets look at Software Enginer in depth, seeing that they don't code as much
 
 ```{r}
@@ -278,45 +608,9 @@ t.WTF<-multipleChoiceResponses[]%>%
 
 hchart(t.WTF, type="column", hcaes(x = Tenure, y = N, group = CodeWriter))
 ```
+## Country vs Compensation Currency, Compensation Amount
 
-# Tenure & Experience
-
-Given that Tenure questios can be indicate of experience.
-
-```{r}
-schema[Column=="Tenure", Question]
-```
-
-Tenure can probably be related to Working Experience, although, this is a hazy indicator given that some might include their numerous years of coding in their education (which typically isn't included in the years of working experience). Sadly, I couldn't find a better indicator in the schema.
-
-```{r}
-t.WTF<-MultipleChoice_func("Tenure")
-hchart(t.WTF, type="column", hcaes(x = value, y = N))
-
-# Create a numeric column indicative of current tenure selections
-# essentially a host of if, then case to set a numeric value fr m.Tenure
-multipleChoiceResponses %>%
-  .[Tenure=="3 to 5 years", m.Experience :=4] %>%
-  .[Tenure=="6 to 10 years", m.Experience :=8] %>%
-  .[Tenure=="1 to 2 years", m.Experience :=2] %>%
-  .[Tenure=="More than 10 years", m.Experience :=12]%>% 
-  #~hand wavingly, though data science being a relatively young field and that the majority of survey user are in their late 20s or early 30, this figures should be alright
-  .[Tenure=="Less than a year", m.Experience :=0] %>%
-  .[Tenure=="I don't write code to analyze data", m.Experience :=NA]
-# perhaps these people rely on tableau and the likes, in any case, this field would not be indicate of their experience in their profession, removing it
-
-## check
-# unique(multipleChoiceResponses[,.(m.Experience, Tenure)])
-
-```
-
-# Country vs Compensation Currency, Compensation Amount
-
-## US
-```{r}
-schema[Column=="Country", Question]
-```
-
+### US
 
 ```{r}
 # Turning CompensationAmountfrom factor into numeric column
@@ -338,8 +632,10 @@ multipleChoiceResponses%>%
           Q3=quantile(CompensationAmount, 0.75)
           ), by=CompensationCurrency]
 
-# From the CI ( Q1 - Q3) in this case, I think one can safetly assume that the salary of those living in US but CompensationCurrency==NA can be changed to USD.
-multipleChoiceResponses[!is.na(CompensationAmount)&!is.na(CompensationCurrency)&Country=="United States", CompensationCurrency:="USD"]
+# From the quantile value (Q1 - Q3) in this case, I think one can safetly assume that the salary of those living in US can be changed to USD.
+
+# Change the Compensation Currency of those living in US yet did not select a currency into USD
+multipleChoiceResponses[!is.na(CompensationAmount)&is.na(CompensationCurrency)&Country=="United States", CompensationCurrency:="USD"]
 
 multipleChoiceResponses[!is.na(CompensationAmount),.N,by = c("Country", "CompensationCurrency")] %>%
   .[order(-N)] %>%
@@ -357,7 +653,8 @@ multipleChoiceResponses[!is.na(CompensationAmount)]%>%
 
 ```
 
-## India
+### India
+
 ```{r}
 
 multipleChoiceResponses[!is.na(CompensationAmount),.N,by = c("Country", "CompensationCurrency")] %>%
@@ -394,84 +691,15 @@ multipleChoiceResponses%>%
 # Though, since we are provided with a .csv of conversion rates and OriginCountry name, lets proceed with joining it together and check if the names match
 ```
 
+## Pay Package
 
-# Currency Codes & Country Name & highcharter Map
-
-```{r}
-# library(RCurl)
-# x <- getURL("https://gist.githubusercontent.com/marcusbaguley/304261/raw/0ab501897ce32fcd3aecd748b74686a20ada9036/Country%2520Currency%2520Code%2520Mappings")
-# y <- read.csv(text = x)
-
-currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
-
-#Cleaning up Conversion Rates, removing X which seems to be a raw ID
-conversionRates$X=NULL
-#Renaming conversionRates to facillate easier join
-colnames(conversionRates)<- c("Code", "ExchangeRate")
-# joining them together
-Currency2CountryConversion<-currency2CountryName[conversionRates, on=.(Code)]
-
-# Converting country code into character
-Currency2CountryConversion$CountryCode<-as.character(Currency2CountryConversion$CountryCode)
-
-dt.combined$conv
-# Combining the main dt with Currency2Country
-dt.combined<-multipleChoiceResponses[!is.na(Country),] %>%
-  .[Currency2CountryConversion, on=.(Country)] %>%
-  # Create a column that account for the conversion rate of local currencies
-  .[!is.na(CompensationAmount),m.CompensationLocal:=CompensationAmount * ExchangeRate]
-
-# Change the columns into character before comparison
-dt.combined$Code<-as.character(dt.combined$Code)
-dt.combined$CompensationCurrency<-as.character(dt.combined$CompensationCurrency)
-
-# Comparison
-unique(dt.combined[CompensationCurrency==Code,.(CompensationCurrency, Code)])
-
-#loading world-geojson that is part of highcharter
-data(worldgeojson)
-
-#plotting for highcharter map
-hcmap(mapData = worldgeojson, 
-      download_map_data=F, data = Currency2CountryConversion, value = "ExchangeRate",
-      joinBy = c("iso-a2", "CountryCode"), name = "Demography",
-      dataLabels = list(enabled = F, format = '{point.name}'), borderWidth = 1,
-      tooltip = list(valueDecimals = 2, valuePrefix = "$", valueSuffix = " USD")) 
-```
-
+### Experience Growth
 
 ```{r}
-t.WTF<-multipleChoiceResponses[!is.na(CompensationAmount)& Country=="India", .(CompensationAmount,CompensationCurrency,m.Experience)] %>%
-  .[is.na(CompensationCurrency)]
+multipleChoiceResponses[Tenure =="Less than a year", Tenure:="0 Less than a year" ]
 
-highchart() %>%
-hc_add_series(density(t.WTF$CompensationAmount))
+# multipleChoiceResponses$m.Experience
 
-require(boot)
-
-set.seed(1000)
-data <- as.data.table(list(x1 = runif(200,0,10), x2 = runif(200), group = runif(200)>0.5))
-stat <- function(x, i) {x[i, c(m1 = mean(x1), m2 = mean(x2))]}
-tempt<-data[, list(list(boot(.SD, stat, R = 10))), by = group]$V1
-
-unique(multipleChoiceResponses[,.(Country)])
-```
-
-
-
-```{r}
-
-colnames(conversionRates)<- c("x", "Country", "exchangeRate")
-multipleChoiceResponses$Country
-multipleChoiceResponses[conversionRates, on=.(Country)] %>%
-  .[,.(conversionRates, Country)]
-```
-
-# Pay Package
-
-## Experience Growth
-
-```{r}
 multipleChoiceResponses %>%
   # Considering only those with non NA compensationAmount
   .[!is.na(CompensationAmount) & CompensationCurrency=="USD"] %>%
@@ -481,17 +709,25 @@ multipleChoiceResponses %>%
           Median=median(CompensationAmount),
           Q1=quantile(CompensationAmount, 0.25),
           Q3=quantile(CompensationAmount, 0.75)
-          ), by =list(Tenure)] %>%
-  .[order(Tenure)]
+          ), by =list(Tenure, m.Experience)] %>%
+  .[order(m.Experience)]
 
+
+# c("Less than a year", "1 to 2 years", "3 to 5 years", "6 to 10 years", "More than 10 years", "I don't write code to analyze data")
+unique(multipleChoiceResponses$EmploymentStatus)
 
 t.WTF <- multipleChoiceResponses %>%
   # Considering only those with non NA compensationAmount
-  .[!is.na(CompensationAmount) & CompensationCurrency=="USD"] %>%
+  .[!is.na(CompensationAmount) & CompensationCurrency=="USD" & !CompensationAmount==0 & EmploymentStatus == "Employed full-time"] %>%
   # Filtering for United States, and also narrowing down to CompensationAmount, CompensationCurrency
-  .[Country=="United States",]
+  .[Country=="United States",] %>%
+  #Need to be named explicitly since highcharter would label it as "series x"if the column name is NA
+  .[is.na(Tenure), Tenure:= "Not Selected"] %>%
+  .[order(Tenure)] %>%
+  .[, if(.N > 5) .SD, by=c("Tenure", "m.Experience")]
+  # arrange(desc(Tenure)) 
 
-  
+
 hcboxplot(x = t.WTF$CompensationAmount, var = t.WTF$Tenure,
           outliers = FALSE) %>% 
   hc_chart(type = "column") # to put box vertical
@@ -500,7 +736,7 @@ hcboxplot(x = t.WTF$CompensationAmount, var = t.WTF$Tenure,
 # hchart(t.WTF, type="boxplot", hcaes(x = CompensationAmount, y = Tenure))
 ```
 
-## Experience & Education
+### Experience & Education
 
 It seems only reasonable to restrict pay packages to individual country (or cities) and local currency.
 
@@ -525,7 +761,7 @@ hcboxplot(x = t.WTF$CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$FormalE
 
 ```
 
-## Experience & Job Title
+### Experience & Job Title
 
 Salary with respect to job title and tenure
 
@@ -535,7 +771,7 @@ PopularJob <- head(AggrJobTitle$CurrentJobTitleSelect,5)
 
 multipleChoiceResponses %>%
   # Considering only those with non NA compensationAmount
-  .[!is.na(CompensationAmount) & CompensationCurrency=="USD"] %>%
+  .[!is.na(CompensationAmount) & CompensationCurrency=="USD" & !is.na(Tenure)] %>%
   # Filtering for United States, and also narrowing down to CompensationAmount, CompensationCurrency
   .[Country=="United States",] %>%
   .[CurrentJobTitleSelect %in% PopularJob,] %>%
@@ -551,78 +787,39 @@ multipleChoiceResponses %>%
 hcboxplot(x = t.WTF$CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$CurrentJobTitleSelect,
           outliers = FALSE) %>% 
   hc_chart(type = "column") # to put box vertical
-
-
 ```
 
-# Past Job title
-##Select
+## Proven Knowledge Select
 
 ```{r}
-schema[Column=="PastJobTitlesSelect", Question]
 
-hchart(fct_infreq(multipleChoiceResponses$PastJobTitlesSelect), "column")
+t.WTF <- MultipleChoiceOptions_func("ProveKnowledgeSelect") 
 
-t.WTF<-multipleChoiceResponses%>%
-  .[,if(.N> 50).SD, by = PastJobTitlesSelect]
-  # .[order(-num)] %>%
 
-hchart(t.WTF, "column")
+hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         hc_title(text = "ProveKnowledgeSelect") %>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="ProveKnowledgeSelect", Asked]),"]",
+                                  eval(schema[Column=="ProveKnowledgeSelect", Question])
+                                  ))
 ```
 
 
-## FreeForm
-```{r}
-## freeformResponse
-# colnames(freeformResponses)
-nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
-# 2094
-
-t.WTF<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
-  .[order(-num)] %>%
-  .[num>20,]
-
-hchart(t.WTF, type="column", hcaes(x = term, y = num))
-```
+## Proven Knowledge FreeForm
 
 
-
-# Learning Platform
-
-```{r}
-t.WTF <- MultipleChoice_func("LearningPlatformUsefulness") 
-hchart(t.WTF, type="column", hcaes(x = LearningPlatformUse, y = N, group = value))
-```
-
-# Work tools Frequency
-
-```{r}
-t.WTF <- MultipleChoice_func("WorkToolsFrequency") 
-hchart(t.WTF, type="column", hcaes(x = WorkToolsFrequency, y = N, group = value))
-```
-
-## Proving your worth for learners
-
-```{r}
-schema[Column=="ProveKnowledgeSelect", Question]
-```
-
-
-```{r}
-t.WTF <- MultipleChoice_func("ProveKnowledge") 
-hchart(t.WTF, type="column", hcaes(x = ProveKnowledge, y = N, group = value))
-```
-
-Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to free writing this.
 
 ```{r}
 # nrow(freeformResponses[!is.na(ProveKnowledgeFreeForm)])
 # 122
 
-Wordclourd_func("ProveKnowledgeFreeForm")
+word_freqs <- Wordclourd_func("ProveKnowledgeFreeForm")
+wordcloud(word_freqs$term, word_freqs$num, max.words = 100,
+           random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
 ```
 
-# ImpactfulAlgorithmFreeForm
+# Impactful Algorithm FreeForm
 
 ```{r}
 # Checking the valid number of input
@@ -630,14 +827,30 @@ Wordclourd_func("ProveKnowledgeFreeForm")
 # 4379
 
 # ImpactfulAlgorithmFreeForm
-Wordclourd_func("ImpactfulAlgorithmFreeForm")
+word_freqs <-  Wordclourd_func("ImpactfulAlgorithmFreeForm")
+wordcloud(word_freqs$term, word_freqs$num, max.words = 100,
+           random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
 
 ```
 
 
 # Choropleths Map
 
-With highcharter maps and geocodes
+# Currency Codes & Country Name & highcharter Map
+
+```{r}
+#loading world-geojson that is part of highcharter
+data(worldgeojson)
+
+#plotting for highcharter map
+hcmap(mapData = worldgeojson, 
+      download_map_data=F, data = Currency2CountryConversion, value = "ExchangeRate",
+      joinBy = c("iso-a2", "CountryCode"), name = "Demography",
+      dataLabels = list(enabled = F, format = '{point.name}'), borderWidth = 1,
+      tooltip = list(valueDecimals = 2, valuePrefix = "$", valueSuffix = " USD")) 
+```
+
+# Highcharter maps and geocodes
 
 ```{r}
 # making a list of file in current working directory
