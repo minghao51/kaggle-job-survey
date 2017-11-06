@@ -75,6 +75,17 @@ Some custom data that I used
 currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
 ```
 
+
+```{r}
+highchart() %>% 
+  hc_yAxis_multiples(
+    list(lineWidth = 3),
+    list(showLastLabel = FALSE, opposite = TRUE)
+  ) %>% 
+  hc_add_series(data = rnorm(10)) %>% 
+  hc_add_series(data = rexp(10), type = "spline", yAxis = 1)
+```
+
 # Function
 
 ```{r}
@@ -89,7 +100,9 @@ MultipleChoice_func = function(question, dt = multipleChoiceResponses){
     # Shortening the str with str_extract
     .[, eval(question):=str_extract(get(question), paste0("(?<=",eval(question),")([A-Za-z])*"))] %>%
     # Aggregate the counts
-    .[,.N, by=c(eval(question), "value")] %>%
+    .[,list(N=.N),
+            by=c(eval(question), "value")] %>%
+    .[, percentage := N/sum(N)] %>%
   # The output should be plotted and processed, the numbers are already aggregated
     .[order(-N)]
 }
@@ -267,9 +280,16 @@ nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
 
 t.WTF<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
   .[order(-num)] %>%
-  .[num>20,]
+  .[num>20,] %>%
+  .[, percent:=num/sum(num)*100, ]
+  
 
 hchart(t.WTF, type="column", hcaes(x = term, y = num))
+
+
+highchart() %>%   
+  hc_add_series(t.WTF, "column", hcaes(x = term, y = num), name = "column") %>%
+  hc_add_series(t.WTF, "pie", hcaes(name = term, y = percent), name = "Bars")
 ```
 
 ## Job Factor
@@ -281,6 +301,31 @@ hchart(t.WTF, type="column", hcaes(x = JobFactor, y = N, group = value),
                                    options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
          hc_title(text = "JobFactor") 
 
+
+per.dt<-t.WTF %>%
+  .[, .(percent=sum(percentage)), by = JobFactor]
+
+
+highchart() %>%   
+  hc_add_series(t.WTF, "column", hcaes(x = JobFactor, y = N, group = value), name = "column") %>%
+  hc_add_series(per.dt, "pie", hcaes(name = JobFactor, y = percent), name = "Bars") %>% 
+   # Optiosn for each type of series
+  hc_plotOptions(
+    series = list(
+      showInLegend = FALSE,
+      pointFormat = "{point.y}%"
+    ),
+    pie = list(
+      colorByPoint = TRUE, center = c('30%', '10%'),
+      size = 120, dataLabels = list(enabled = FALSE)
+    )) %>%
+  # Axis
+  hc_xAxis(categories = t.WTF$JobFactor) %>%
+  #Title & Subtitle
+         hc_title(text = "JobFactor") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="JobFactor", Asked]),"]",
+                           eval(schema[Column=="JobFactor", Question])
+                           ))
 
 ```
  The Majority learners seems to think that their Job title are a somewat important. Although surprisingly, not all of the learners hold job title in an important place
@@ -523,13 +568,10 @@ plot(net, edge.arrow.size=.4,vertex.label=NA)
 
 plot(net, edge.arrow.size=.4,layout=layout_in_circle, vertex.label=NA, edge.width=E(net)$weight/200)
 
-plot(net, edge.arrow.size=.4,layout=layout_in_star, vertex.label=NA, edge.width=E(net)$weight/200)
+# plot(net, edge.arrow.size=.4,layout=layout_in_star, vertex.label=NA, edge.width=E(net)$weight/200)
 
 ```
 
-```{r}
-  net <- simplify(net, remove.multiple = F, remove.loops = T) 
-```
 
 
 
