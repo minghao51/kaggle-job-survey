@@ -481,8 +481,9 @@ t.WTF <- MultipleChoiceOptions_func("LearningPlatformSelect")
 
 
 hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
-                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
-         hc_title(text = "LearningPlatformUsefulness") %>%
+                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
+  # title and subtitle
+         hc_title(text = "LearningPlatformSelect") %>%
          hc_subtitle(text = paste("Q",
                                   "[",eval(schema[Column=="LearningPlatformSelect", Asked]),"]",
                                   eval(schema[Column=="LearningPlatformSelect", Question])
@@ -494,17 +495,37 @@ hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
 ## Learning Platform Usefulness
 
 ```{r}
-schema[Column=="LearningPlatformUsefulness", Question]
+# multipleChoiceResponses$LearningPlatformSelect
 
-t.WTF <- MultipleChoice_func("LearningPlatformUsefulness") 
+# Extracting values for column plot
+Agg_LearningPlatform <- MultipleChoice_func("LearningPlatformUsefulness") 
 
-hchart(t.WTF, type="column", hcaes(x = LearningPlatformUsefulness, y = N, group = value),
-                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
-         hc_title(text = "LearningPlatformUsefulness") 
-         # hc_subtitle(text = paste("Q",
-         #                          "[",eval(schema[Column=="LearningPlatformUsefulness", Asked]),"]",
-         #                          eval(schema[Column=="LearningPlatformUsefulness", Question])
-         # ))
+# values for spline plot
+Avg_LearningPlatform <- Agg_LearningPlatform %>%
+  .[value == "Very useful", score := 2] %>%
+  .[value == "Somewhat useful", score := 1] %>%
+  .[value == "Not Useful", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(LearningPlatformUsefulness)]
+
+# hchart(Agg_LearningPlatform, type="column", hcaes(x = LearningPlatformUsefulness, y = N, group = value), options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
+#   # title and subtitle
+#          hc_title(text = "LearningPlatformUsefulness") 
+
+
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
+  ) %>%
+  hc_add_series(Agg_LearningPlatform, "column", hcaes(x = LearningPlatformUsefulness
+                                                      , y = N, group = value)) %>%
+  hc_add_series(Avg_LearningPlatform, "spline", hcaes(x = LearningPlatformUsefulness, y = Average), name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_LearningPlatform$LearningPlatformUsefulness)%>%
+  # title and subtitle
+         hc_title(text = "LearningPlatformUsefulness")
+
+
+
 ```
 
 ## Work tools Frequency
@@ -521,6 +542,7 @@ hchart(t.WTF, type="column", hcaes(x = WorkToolsFrequency, y = N, group = value)
 t.WTF <- MultipleChoice_func("ProveKnowledge") 
 hchart(t.WTF, type="column", hcaes(x = ProveKnowledge, y = N, group = value))%>%
     hc_title(text = "ProveKnowledge") %>%
+  # title and subtitle
   hc_subtitle(text = paste("Q","[",eval(schema[Column=="ProveKnowledgeSelect", Asked]),"]",
                            eval(schema[Column=="ProveKnowledgeSelect", Question])
                            ))
@@ -534,6 +556,7 @@ Its equivalent freeform form of data, however, are overwhelming pointing towards
 ```{r}
 t.WTF <- MultipleChoice_func("AlgorithmUnderstandingLevel") 
 hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value)) %>%
+  # title and subtitle
     hc_title(text = "AlgorithmUnderstandingLevel") %>%
   hc_subtitle(text = paste("Q","[",eval(schema[Column=="AlgorithmUnderstandingLevel", Asked]),"]",
                            eval(schema[Column=="AlgorithmUnderstandingLevel", Question])
@@ -550,6 +573,7 @@ ProveKnowledge_select <- MultipleChoiceOptions_func("ProveKnowledgeSelect")
 
 hchart(ProveKnowledge_select, type="column", hcaes(x = value, y = N, group = value),
                                    options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+  # title and subtitle
          hc_title(text = "ProveKnowledgeSelect") %>%
          hc_subtitle(text = paste("Q",
                                   "[",eval(schema[Column=="ProveKnowledgeSelect", Asked]),"]",
@@ -565,6 +589,8 @@ hchart(ProveKnowledge_select, type="column", hcaes(x = value, y = N, group = val
 ProveKnowledge_FreeForm <- Wordclourd_func("ProveKnowledgeFreeForm")
 wordcloud(ProveKnowledge_FreeForm$term, ProveKnowledge_FreeForm$num, max.words = 100,
            random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
+
+
 ```
 
 ## Impactful Algorithm FreeForm
@@ -576,6 +602,7 @@ schema[Column=="ImpactfulAlgorithmFreeForm", Question]
 ImpactfulAlgorithm_FreeForm <-  Wordclourd_func("ImpactfulAlgorithmFreeForm")
 wordcloud(ImpactfulAlgorithm_FreeForm$term, ImpactfulAlgorithm_FreeForm$num, max.words = 100,
            random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
+
 
 ```
 
