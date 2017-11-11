@@ -43,7 +43,7 @@ require(igraph)
 
 * Note that I made extensive use of data.table packages instead of dplyr to extract, filter, process the data as it's the method that I'm most conformable with.
 
-* The majority ( of not all the plots) are donoe with highcharter.
+* The majority ( of not all the plots) are done with highcharter.
 
 * Quanteda stem completion and tokenisation, while fast, seems slightly less flexible than those of tm/snowball package. 
 
@@ -57,7 +57,7 @@ The .csv are data provided by Kaggle that includes a seperate .csv file for
 
 * Conversion Rates ( with origin Country and exchange Rate)
 * freeformResponse ( For survey questions that accepted freeform inputs)
-* multipleChoiceResponse ( For survey questions that a list of selections are given ( sometimes mulitple selections are accepted)
+* multipleChoiceResponse ( For survey questions that a list of selections are given ( sometimes multiple selections are accepted)
 
 ```{r}
 #input for various csv files.
@@ -79,7 +79,7 @@ schema <- as.data.table(read.csv(file="schema.csv", strip.white = TRUE,
 
 ```
 
-I also used a Country-Currency-Code list from github, as some of the analysis required country to currency mapping( to determine foreign currencies). Also, the Country Name in the given .csv are mapped to iso2 for plotting in hmap ( highchart's map).
+I also used a Country-Currency-Code list from github, as some of the analysis required country to currency mapping( to determine foreign currencies). Also, the Country Names in the given .csv are mapped to iso2 for plotting in hmap ( highchart's map).
 
 ```{r}
 ## Rcurl into data method
@@ -94,6 +94,7 @@ currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"
 ```
 
 Raw dput input to get currency2CountryName into Kaggle
+
 ```{r}
 currency2CountryName <-structure(list(Country = c("New Zealand", "Cook Islands", "Niue", 
 "Pitcairn", "Tokelau", "Australian", "Christmas Island", "Cocos (Keeling) Islands", 
@@ -251,9 +252,9 @@ currency2CountryName <-structure(list(Country = c("New Zealand", "Cook Islands",
 
 Some custom function to ease the extraction of data, inspired by [AmberThomas](https://www.kaggle.com/amberthomas/kaggle-2017-survey-results) functions ( which I adapted the some of the regexp treatments. The three different functions are to 
 
-* MultipleChoice_func : To aggregate and summarise column in multipleChoiceResponses.csv that follows certain pattern. For example, multipleChoiceResponses(Country) would output a list of country with aggregated counts. Also the input will be melted into long format while aggregatation to various factor as in the case multipleChoiceResponses(Jobfactor) in which case there is multiple column of JobFactorCommute, JobFactorCompanyFunding etc 
+* MultipleChoice_func : To aggregate and summarise column in multipleChoiceResponses.csv that follows certain pattern. For example, multipleChoiceResponses(Country) would output a list of country with aggregated counts. Also, the input will be melted into long format while aggregatation to various factor as in the case multipleChoiceResponses(Jobfactor) in which case there is multiple columns of JobFactorCommute, JobFactorCompanyFunding etc 
 
-* MultipleChoiceOptions_func : For survey questions that accept multiple selection, since these columns require strsplit treatment before aggregation and summarising as the contents are stored in comma seperated list. Ie, MultipleChoiceOptions_func(PastJobTitlesSelect)
+* MultipleChoiceOptions_func : For survey questions that accept multiple selections, since these columns require strsplit treatment before aggregation and summarising as the contents are stored in comma separated list. Ie, MultipleChoiceOptions_func(PastJobTitlesSelect)
 
 * Wordclourd_func: applying dfm(quanteda) treatment on the freeformresponses related column to generated a wordfrequency df.
 
@@ -336,7 +337,7 @@ Wordclourd_func = function(input, dt = freeformResponses){
 
 # Basic visualisation {.tabset}
 
-This section depicts the some basic plots of survey, which could be used to explore the cross section data analysis with it's tabbed structure. 
+This section depicts some basic plots of the survey, which could be used to explore the cross-section data analysis with its tabbed structure. Some of the pre-processing of the variables can be found here as well.
 
 Initially,  I intended to look at into Pay vs Experience and Demographics of countries, but it has since grown up a bit.
 
@@ -363,9 +364,9 @@ hchart(fct_infreq(multipleChoiceResponses$Country), "column") %>%
   hc_xAxis(text = "Countries", labels = list(rotation = 90))
   
 ```
-**People 's Republic of China - China** and  **Republic of China - Taiwan** is available for selective as seperate entries. Both of the names are coverted into shorter, one word form. Also, noted that there are seperate entries for selection for Hong Kong.
+**People 's Republic of China - China** and  **Republic of China - Taiwan** is available for selective as separate entries. Both of the names are converted into shorter, one-word form. Also, noted that there are separate entries for selection for Hong Kong.
 
-Given that this is the results of a survey done on Kaggle, there would be some natural bias towards kaggle and english medium. There may exist other data science platforms that are more popular in Other countries, especially if that country's medium of communication is another languages(China, Japan, Germany).
+Given that this is the results of a survey done on Kaggle, there would be some natural bias towards kaggle and English medium. There may exist other data science platforms that are more popular in Other countries, especially if that country's medium of communication is another language(China, Japan, Germany).
 
 Also, the sum of the three entries(Taiwan, China, Hong Kong) would make China the third country with most popular with survey respondents, just after India.
 
@@ -375,7 +376,7 @@ Also, the sum of the three entries(Taiwan, China, Hong Kong) would make China th
 
 ## Tenure
 
-Tenure can probably be related to Working Experience, although, given that the question of tenure is directed to all,, this is a hazy indicator given that some might include their years of coding in their education (which typically isn't included in the years of working experience). There is no better alternative in exploring working experience though.
+Tenure can probably be related to Working Experience, although, given that the question of tenure is directed to all, this is a hazy indicator given that some might include their years of coding in their education (which typically isn't included in the years of working experience). There is no better alternative to explore working experience though.
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$Tenure), "column")%>%
@@ -415,7 +416,9 @@ hchart(fct_infreq(multipleChoiceResponses$CodeWriter), "column")%>%
                            ))
 ```
 
-Interestingly, about one third of people dont work with codes. I can only think of three posible reasons, one is that they are moved up into project management roles that dont require them to work with codes. Second, they working in more of a analyst role dealing with the likes of tableau/excel or other data analyst software that dont require codes. Alternatively, it is possible that they are working in another field, and are looking to break into data science.
+Interestingly, about one-third of people don't work with codes. I can only think of three possible reasons, one is that they are moved up into project management roles that don't require them to work with codes. Second, they could be working in more of an analyst role dealing with the likes of tableau/excel or other data analysis software that doesn't require codes. Finally, it is possible that they are working in another field, and are looking to break into data science.
+
+This will be explored with Job title and years of Tenure in a section later.
 
 
 <br/>
@@ -475,7 +478,7 @@ highchart() %>%
 
 ```
 
-Evidently, Data Scientist, Software Developer, Data analyst and Scientist/Researh are most popular. I  am puzzle by what is the difference between Scientist/Research and Research (Maybe Education might shed a light?), perhaps they should be aggregated into a single option? Though in that case they will be the 3rd most popular job title, even before Data analyst
+Evidently, Data Scientist, Software Developer, Data analyst and Scientist/Research are most popular. I  am puzzle by what is the difference between Scientist/Research and Research (Maybe Education might shed a light?), perhaps they should be aggregated into a single option? Though in that case they will be the 3rd most popular job title, even before Data analyst.
 
 
 <br/>
@@ -532,6 +535,8 @@ highchart() %>%
 
 ```
 
+So it seems that most of the Data Science people are coming from Software Developer roles, Researcher, Programmer and Data analyst.
+
  <br/>
  
 ### FreeForm
@@ -539,7 +544,7 @@ highchart() %>%
 ```{r}
 ## freeformResponse
 # colnames(freeformResponses)
-nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
+# nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
 # 2094
 
 PastJobTitle_WordFreq<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
@@ -563,7 +568,7 @@ highchart() %>%
 ```
 
 
- The Majority learners seems to think that their Job title are a somewat important. Although surprisingly, not all of the learners hold job title in an important place
+Quite a bit a people wrote manager in freeform response to past job titles. Given the age of the survey respondents, this surprises me a bit. Maybe Job with managers title doesn't require extensive experience in some countries? 
 
 
 <br/>
@@ -580,7 +585,7 @@ hchart(multipleChoiceResponses$Age, na.rm =T)%>%
                            ))
 ```
 
-As noted by other kernals, most the respondents of the survey are young, most likely in their mid 20s.
+As noted by other kernels, most the respondents of the survey are young, likely in their mid-20s.
 
 ```{r}
 # highchart() %>%
@@ -626,7 +631,10 @@ hchart(fct_infreq(multipleChoiceResponses$CareerSwitcher), na.rm =T,
                            eval(schema[Column=="CareerSwitcher", Question])
                            ))
 ```
-Plenty seems are intending to turn towards data science, well. This is probably the reason why most of us are here anyway. To learn , practice and prove ourselves.
+
+Plenty of Workers1 (note that there probably implies non-coding worker as per the schema, seeing that there is a separate category for CodingWorker) are intending to turn into data science. 
+
+Would be interesting to see how this group fares (for noncoders).
 
 <br/>
 <hr/>
@@ -672,7 +680,7 @@ highchart() %>%
 
 ```
 
-Wow, most people saw a 20% increase in salary over 3 years. Guess Data science is indeed a field in demand.
+Almost a third of the people saw a 20% increase in salary over 3 years.
 
 <br/>
 <hr/>
@@ -696,7 +704,7 @@ hchart(multipleChoiceResponses$RemoteWork, na.rm =T)%>%
 
 The only meaningful column in the ConversionRates provided along with survey results are 
 
-* OriginCountry : (USD, EUR, AUD) which is more indicative of currency, the column name is somewat misleading. 
+* OriginCountry : (USD, EUR, AUD) which is more indicative of currency, the column name is somewhat misleading. 
 
 * conversionRates : Respective conversion rates of various currencies to USD. 
 
@@ -708,7 +716,7 @@ conversionRates$X=NULL
 colnames(conversionRates) <- c("Code", "ExchangeRate")
 ```
 
-The conversion rates dt need to be joined with the country-currencies input, which can be used to indentify the original currencies of the respective countries, allowing us to identify number of individual earning foreign currencies.
+The conversion rates dt will need to be joined with the country-currencies input, which can be used to identify the original currencies of the respective countries, allowing us to identify the number of individual earning foreign currencies in different countries.
 
 ```{r}
 # # joining currency2CountryName and conversionRates together
@@ -840,7 +848,7 @@ highchart() %>%
   ))
 ```
 
-Evidently, the majority learners think that working experience is the most important methods to prove their knowledge of DS/ML. This is followed by Kaggle competitions, Online courses and Github Portfolio. 
+Evidently, the majority learners think that working experience is the most important methods to prove their knowledge of DS/ML. This is followed by Kaggle competitions, Online courses, and Github Portfolio. 
 
 <br/>
 
@@ -853,9 +861,9 @@ wordcloud(ProveKnowledge_FreeForm$term, ProveKnowledge_FreeForm$num, max.words =
            random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
 ```
 
-Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to fill the free form data.
+Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to fill the free-form data.
 
-I think this previous selections has  for proven knowledge has limited the respondents to choose only amount the listed choices (ie, bias in the sense that most people are unlikely to select "Other" option and fill in projects, instead prefer to choose amount the available options). Among the choice I think that are missing from the list are projects, open-sourced packages contributions, blogs and publication.
+I think this previous selection for proven knowledge has limited the respondents to choose only amount the listed choices (ie, bias in the sense that most people are unlikely to select "Other" option and fill in projects, instead prefer to choose amount the available options). Among the choice I think that are missing from the list are projects, open-sourced packages contributions, blogs, and publication.
 
 
 <br/>
@@ -930,7 +938,7 @@ wordcloud(ImpactfulAlgorithm_FreeForm$term, ImpactfulAlgorithm_FreeForm$num, max
 
 ```
 
-Well regression is still the most impactful algorithm, I guess it pays to be simple and easily interpretable. All other popular algorithm such as random forest, neural network, logistic regression are also mentioned.
+Well, regression is still the most impactful algorithm, I guess it pays to be simple and easily interpretable. All other popular algorithms such as random forest, neural network, logistic regression are also mentioned.
 
 <br/>
 <hr/>
@@ -938,11 +946,11 @@ Well regression is still the most impactful algorithm, I guess it pays to be sim
 
 # Mixed Visualisation
 
-Most of the kernals that I had seen looks to explore the surveys results with barcharts. While it easily shows which are the most popular factor, the bar chart may appear misleading if there are less people submitting response for a particular section, or that the respondents are divided, dividing into two extremes. Some respondents may just not be familier with a particular option.
+Most of the kernels that I had seen looks to explore the survey results with bar charts. While it easily shows which are the most popular factor, the bar chart may appear misleading if there are fewer people submitting responses for a particular section, or that the respondents are divided, dividing into two extremes. Some respondents may just not be familiar with a particular option.
 
-I attributed each availabe factor to a linear scale (not that it has to be linear), such a that for a 3 factor list, it would be considered as 0, 1, 2 instead, the higher number are giving to a more favourable condition ( the higher the better). 
+I attributed each available factor to a linear scale (not that it has to be linear), such a that for a 3-factor list, it would be considered as 0, 1, 2 instead,  higher number implying a more favorable condition ( the higher the better). 
 
-Also, since the list of questions are identical for a particular extraction of datasets ( ie Job Factor, I will just adapt a random one of the exact question from the scheme to depict the question clearly).
+Also, since the list of questions are identical for a particular extraction of datasets ( ie Job Factor, I will just adopt a random one of the exact question from the scheme to depict the question clearly).
 
 <br/>
 <hr/>
@@ -1013,9 +1021,9 @@ highchart() %>%
 
 ```
 
-Interestingly, while the bar chart shows that company/funding is also rather important, there exist a certain segments of individuals who think it is not as important (thereby lowering the score). 
+Interestingly, while the bar chart shows that company/funding is also rather important, there exist certain segments of individuals who think it is not as important (thereby lowering the score). 
 
-Overall, I think the spine plot better depicts Learners' preferance for opportunities in Learning, Office, Salary, Languages and Management. Value concepts and abtracts notions such as diversity and leader reputation are second to their consideration. This seems better comfort to the my normal expectations.
+Overall, I think the spine plot better depicts Learners' preference for opportunities in Learning, Office, Salary, Languages, and Management. Value concepts and abstracts notions such as diversity and leader reputation are second to their consideration. This seems better comfort to the norm.
 
 <br/>
 <hr/>
@@ -1124,7 +1132,7 @@ By the ranks
 
 6. R
 
-I'm rather surprise to see "Select" here. Especially when it scored rather low on the WorkMethodsFrequency.
+"Select" despite it's low popularity, score quite well.
 
 <br/>
 <hr/>
@@ -1180,6 +1188,8 @@ Importance by the ranks of Average Score.
 
 5. R
 
+So I guess programming language (Python/R), Statistics, Data visualisation are the core skills.
+
 <br/>
 <hr/>
 <br/>
@@ -1225,9 +1235,13 @@ highchart() %>%
 ```
 
 By the ranks of Average Score.
+
 1. Data Visualisation
+
 2. Cross
+
 3. GBM - tied 
+
 4. LogisticRegression  - tied 
 
 Not sure what to make of "Select" low average score, perhaps it is just not popular with worker?
@@ -1310,13 +1324,13 @@ E(net)$width <- E(net)$weight/150
 hchart(net, layout = layout_with_fr)
 ```
 
-The color should be indicate of communities in the network graph, acquired via **cluster_walktrap**. Sadly, while highchart's plot is interactive, I couldn't get the arrow to be shown in the network graph ( to shown where have the individuals been moving).
+The color is indicative of the communities in the network graph, acquired via **cluster_walktrap**. Sadly, while highchart's plot is interactive, I couldn't get the arrow to be shown in the network graph ( as shown where have the individuals been moving).
 
-The Weight options for the width of the lines are manually set to reduce the visibility of less job title changes. Alternative, one could implement a cutoff/threhold value as to when to draw a line connecting the nodes.
+The Weight options for the width of the lines are manually set to reduce the visibility of less job title changes. An alternative approach is to implement a cutoff/threshold value as to when to draw a line connecting the nodes ( sparsity ).
 
-The size of the individual nodes are indicative of the population of respective current job title.
+The size of the individual nodes is indicative of the population of respective current job title.
 
-Overall, it seems Data Scientist are the core of the network plots, with most of its network coming from data analyst, Software Developer/Software Engineer, and Researcher.
+Overall, it seems Data Scientist is the core of the network plots, with most of its network coming from data analyst, Software Developer/Software Engineer, and Researcher.
 
 
 <br/>
@@ -1326,7 +1340,7 @@ Overall, it seems Data Scientist are the core of the network plots, with most of
 
 # Differences of Percentage in of The Jobtitle of current and past.
 
-If we plot the percentage difference between job title of current and past ( though, not all positions are equal, some roles may be appear more frequency simply due to it being a high competative filed).
+If we plot the percentage difference between job title of current and past ( though not all positions are equal, some roles may appear more frequency simply due to it being a highly competitive filed).
 
 ```{r}
 t.vertices_dif <- t.vertices_w_current[value!="Not given"] %>%
@@ -1340,7 +1354,7 @@ highchart()%>%
   hc_title(text = "Differences of Percentage in of The Jobtitle of current and past")
 ```
 
-This shows that the job titles of Data scientist and Scientist/Researcher have been becoming popular overtime, ie, while the percentage of those who once hold title of programmer and data analyst has decreased. I wonder if this means that Kaggle survey respondents have been slowly moving into their field of choice (Data Science) after parting from their past jobs.  
+This shows that the job titles of Data scientist and Scientist/Researcher have been becoming popular over time, ie, while the percentage of those who once held a title of programmer and data analyst has decreased. I wonder if this means that Kaggle survey respondents have been slowly moving into their field of choice (Data Science) after parting from their past jobs.  
 
 
 <br/>
@@ -1360,9 +1374,9 @@ hc_title(text = "Coders with relation to Job Title")
 
 ```
 
-Well, it seems close to half of the Software Enginer dont write codes? That's a bit strange.
+Well, it seems close to half of the Software Engineer don't write codes? That's a bit strange.
 
-In case for Business Analyst and Data Analyst, the amount of non coders could maybe be attributed to their dealing with other statistical software. Perhaps some of the jobs still involve around good old excel.
+In the case of Business Analyst and Data Analyst, a number of noncoders could maybe be attributed to their dealing with other statistical software. Perhaps some of the jobs still involve around good old excel.
 
 
 
@@ -1393,9 +1407,9 @@ hchart(t.WTF, type="bar", hcaes(x = Combined, y = N, group = CodeWriter)) %>%
 
 ```
 
-In both three case, it seems that some Business Analyst, Programmers and Software engineer entry level jobs does not require the entrant to be coders. There exist a significant amount of non coders in these jobs. However, it seems that those with more working experience in these field do write codes.
+In both three case, it seems that some Business Analyst, Programmers, and Software engineer entry level jobs do not require the entrant to be coders. There exist a significant amount of noncoders in these jobs. However, it seems that those with more working experience in these fields do write codes.
 
-It seems that these professions are good staging ground for those who are intending venture into Data Science for those who are weak on the codes/programming side. Especially if you are from another field. Although, from what I seen (in Asia) , those Business Analyst roles typically require finance/business background instead of science.
+It seems that these professions are a good staging ground for those who are intending venture into Data Science for those who are weak on the codes/programming side. Especially if you are from another field. Although, from what I seen (in Asia) , those Business Analyst roles typically require finance/business background instead of science.
 
 On the other hand, the fabled "manager role" that dont require coding is elusive where experienced coders migrate to is nowhere to be found.
 
@@ -1424,7 +1438,8 @@ multipleChoiceResponses[Country=="United States" &
                         ), by=CompensationCurrency] %>%
   .[N>5]
 ```
-From the quantile value (Q1 - Q3) in this case, I think one can safetly assume that the salary of those living in US can be changed to USD.
+
+From the quantile value (Q1 - Q3) in this case, I think one can safely assume that the salary of those living in the states can be changed to USD.
 
 ```{r}
 # Change the Compensation Currency of those living in US yet did not select a currency into USD.
@@ -1512,7 +1527,7 @@ I used ggplot's boxplot here as I couldn't get the highchart's boxplot (hcboxplo
 
 The ranking of countries slightly differs from that of [ikeiman](https://www.kaggle.com/ikleiman/data-scientists-salaries-around-the-world), probably because of slightly differing processes. While I adapted ikeiman's treatment to account for monthly salary ( ie compensation \times 12 if the value is between 6 and 36 fractions of the median salary.), I also went for a more narrow filter (accepting only those listed in respective local currencies of their home country) and simply applied and 5% cut on head and tail of the distribution.
 
-Hence, the compensations listed here is probably more appropriate to those employed and compensated locally instead of remotely, as we will see in next section, country like Isreal, Ukraine, India bosted a significant number of individual earning foregin currencies
+Hence, the compensations listed here is probably more appropriate to those employed and compensated locally instead of remotely, as we will see in next section, country like Isreal, Ukraine, India bosted a significant number of individual earning foreign currencies
 
 
 <br/>
@@ -1549,7 +1564,7 @@ highchart() %>%
 
 ```
 
-USD is the most popular foregin currency by far for those who earn foreign currencies. Surprisingly, Ukraine, showed up right after India to as one of the more popular country for its individuals to receive compensation in USD. I wonder if it is because some of the individuals holding top jobs in the country demand salary in USD or that this is a popular practice at certain regions
+USD is the most popular foreign currency by far for those who earn foreign currencies. Surprisingly, Ukraine, showed up right after India to as one of the more popular countries for its individuals to receive compensation in USD. I wonder if it is because some of the individuals holding top jobs in the country demand salary in USD or that this is a popular practice in certain regions
 
 I think this list has no bearings on whether the jobs are offshored. Data science is still relatively a new field. Many companies (especially those more ambitious local ones) are currently just trying to label new position as data science/analyst when it could have been a statistician/executive job previously.
 
@@ -1560,7 +1575,7 @@ I think this list has no bearings on whether the jobs are offshored. Data scienc
 
 ## Pay Package
 
-In this section, we restrict ourselves to examine the paychecks of those living in US. Mainly as to how individual's education, experience and job title influenced their compensation.
+In this section, we restrict ourselves to examine the paychecks of those living in US. Mainly as to how individual's education, experience, and job title influenced their compensation.
 
 ### Experience Growth
 
@@ -1605,7 +1620,7 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure) %>%
   hc_subtitle(text = "To facilitate a fair comparison, the figures are drawn only from those fully employed in US, along with trimming of 5% and 95% of the distribution") 
 ```
 
-* There exist a noticably spike between those with experience of 3 to 5 years and 6 to 10 years. This the difference is even more significant for 10+ years, though, those with 1-2 years of experience and the entries level experience are without luck. (If we were to relate compensation to demand, does this implies that the demand at fresh graduates/new entries level have been tamed?)
+* There exists a noticeable spike between those with experience of 3 to 5 years and 6 to 10 years. This the difference is even more significant for 10+ years, though, those with 1-2 years of experience and the entries level experience are without luck. (If we were to relate compensation to demand, does this implies that the demand at fresh graduates/new entries level has been tamed?)
 
 
 <br/>
@@ -1662,9 +1677,9 @@ With regards to education, the level of education for "I did not complete any fo
 
 In the case of "without formal education past high school", there is only a single data point at 6-10 years of experience while making $150k PA.
 
-For those with 1-2 years into the field, it seems that the compensation does somewat correlate with the level of education. Though, unfortunately, it seems the effect of education  ( degree level and above) is less pronounce after 6 to 10 years. Perhaps it doesn't pays to be highly educated for a long ran?
+For those with 1-2 years into the field, it seems that the compensation does somewhat correlate with the level of education. Though, unfortunately, it seems the effect of education  ( degree level and above) is less pronounced after 6 to 10 years. Perhaps it doesn't pay to be highly educated for a long ran?
 
-Though, please take this with a pinch of salt as DS is a new field, eventually, certain positions may simply require minimun Master's degree to even be considered ( as per other fields, the fault of specialisation we have these days).
+Though, please take this with a pinch of salt as DS is a new field, eventually, certain positions may simply require minimum Master's degree to even be considered ( as per other fields, the fault of specialization we have these days).
 
 
 <br/>
@@ -1720,7 +1735,7 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$Curre
 
 *You may need to click on the legend on the plot to hide/unhide a certain categories to better identify certain category.*
 
-While title doesn't seems to be worthly important to learners ( in Mixed Visuallsation - Job Factor section), the respective compensation one receive after years in the industry can be quite different.
+While the title doesn't seem to be worthy important to learners ( in Mixed Visualisation - Job Factor section), the respective compensation one receive after years in the industry can be quite different.
 
 Researcher and Scientist/Researcher seems to have it worst in the early years of their tenure. Although it seems some did make it big after working on it for 10 years. Data Scientist gain in compensation over the years is among the best. Especially considering that the population for Researcher and Machine Learning Engineer are small (and the fact that probably few went so far). 
 
@@ -1749,7 +1764,7 @@ multipleChoiceResponses %>%
 
 ###  Demographic Map
 
-* Ncount - Indicative of number of individulas 
+* Ncount - Indicative of number of individuals 
 * AgeMedian - Median Age of the population
 * WorkingExpMedian - Depict the median experience of tenure/working
 * WorkingP(working Population) - The percentage of those who are **"Employed full-time"**, **"Independent contractor, freelancer, or self-employed"** and **"Employed part-time"**
@@ -1811,6 +1826,7 @@ hc_tooltip(useHTML = TRUE,
 
 ###  Compensation and JobTitle Percentage Map 
 
+*
 
 
 ```{r}
