@@ -1764,6 +1764,8 @@ multipleChoiceResponses %>%
 
 ###  Demographic Map
 
+Colored by the value in the percentage of people looking to switch career.
+
 * Ncount - Indicative of number of individuals 
 * AgeMedian - Median Age of the population
 * WorkingExpMedian - Depict the median experience of tenure/working
@@ -1808,7 +1810,7 @@ t.cut$iso2<- t.cut$CountryCode
 
 
 highchart()%>%
-  hc_add_series_map(worldgeojson, df = t.cut, value = "LookingForJobP", joinBy = "iso2",
+  hc_add_series_map(worldgeojson, df = t.cut, value = "CareerSwitcherP", joinBy = "iso2",
                     dataLabels = list(enabled = TRUE,
                                       format = '{point.name}'), name = "Demography") %>%
 hc_tooltip(useHTML = TRUE,
@@ -1826,7 +1828,12 @@ hc_tooltip(useHTML = TRUE,
 
 ###  Compensation and JobTitle Percentage Map 
 
-*
+Colored by the value in respective country local currencies
+
+* LocalPay.Med - Median pay in local currency of that country. [CountryCode](Q1-Q3)
+* USDPay.Med - Median pay in USD
+* DS_P - Percentage of people who choosed Data Sciencist as their Current Job Title
+* Research_P - Percentage of people who choosed Researcher/Scientist as their Current Job Title
 
 
 ```{r}
@@ -1839,8 +1846,8 @@ t.cut<-multipleChoiceResponses[!is.na(Country),] %>%
        CompensationUSD_Median = as.numeric(median(m.CompensationUSD, na.rm=T)),
        CompensationUSD_Q3=signif(quantile(m.CompensationUSD, 0.75, na.rm = T),2),
        CompensationUSD_Q1=signif(quantile(m.CompensationUSD,0.25, na.rm=T),2),
-       DS_P=signif(mean(CurrentJobTitleSelect=="Data Scientist", na.rm=T),2),
-       Research_P=signif(mean(CurrentJobTitleSelect=="Researcher" | CurrentJobTitleSelect=="Scientist/Researcher ", na.rm=T),1)
+       DS_P=signif(mean(CurrentJobTitleSelect=="Data Scientist", na.rm=T)*100,2),
+       Research_P=signif(mean(CurrentJobTitleSelect=="Researcher" | CurrentJobTitleSelect=="Scientist/Researcher ", na.rm=T)*100,1)
        ), 
   by=c("CountryCode", "Country")]
       
@@ -1857,9 +1864,9 @@ hc_tooltip(useHTML = TRUE,
                                  "<tr><th>LocalPay.Med<td>{point.CompensationLocal_Median}</td></th></tr>",
                               "<tr><th>LocalPay.Q3<td>{point.CompensationLocal_Q3}</td></th></tr>",
                                  "<tr><th>LocalPay.Q1</th><td>{point.CompensationLocal_Q1}</td></tr>",
-                                 "<tr><th>USDPay.Med</th><td>{point.CompensationUSD_Median}</td></tr>",
-                                 "<tr><th>DS.P</th><td>{point.DS_P}</td></tr>",
-                               "<tr><th>Research.P</th><td>{point.Research_P}</td></tr>"),
+                                 "<tr><th>USDPay.Med</th><td>{$}{point.CompensationUSD_Median}</td></tr>",
+                                 "<tr><th>DS_P</th><td>{point.DS_P}</td></tr>",
+                               "<tr><th>Research_P</th><td>{point.Research_P}</td></tr>"),
              footerFormat = "</table>")
 
 
