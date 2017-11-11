@@ -61,20 +61,38 @@ The .csv are data provided by Kaggle that includes a seperate .csv file for
 
 ```{r}
 #input for various csv files.
-conversionRates <- as.data.table(read.csv(file="conversionRates.csv", strip.white = TRUE, 
-                             na.strings=c("","NA"), 
+
+# conversionRates <- as.data.table(read.csv(file="../input/conversionRates.csv",strip.white = TRUE, 
+#                                           na.strings=c("","NA"), 
+#                                           stringsAsFactors = FALSE))
+# multipleChoiceResponses <- as.data.table(read.csv(file="../input/multipleChoiceResponses.csv",
+#                                           strip.white = TRUE, 
+#                                           na.strings=c("","NA"), 
+#                                           stringsAsFactors = FALSE))
+# freeformResponses <- as.data.table(read.csv(file="../input/freeformResponses.csv",
+#                                           strip.white = TRUE, 
+#                                           na.strings=c("","NA"), 
+#                                           stringsAsFactors = FALSE))
+# schema <- as.data.table(read.csv(file="../input/schema.csv",
+#                                           strip.white = TRUE, 
+#                                           na.strings=c("","NA"), 
+#                                           stringsAsFactors = FALSE))
+# 
+conversionRates <- as.data.table(read.csv(file="input/conversionRates.csv", strip.white = TRUE,
+                             na.strings=c("","NA"),
                              stringsAsFactors = FALSE))
 
-freeformResponses <- as.data.table(read.csv(file="freeformResponses.csv", strip.white = TRUE, 
-                             na.strings=c("","NA"), 
+
+freeformResponses <- as.data.table(read.csv(file="input/freeformResponses.csv", strip.white = TRUE,
+                             na.strings=c("","NA"),
                              stringsAsFactors = FALSE))
 
-multipleChoiceResponses <- as.data.table(read.csv(file="multipleChoiceResponses.csv", strip.white = TRUE, 
-                             na.strings=c("","NA"), 
+multipleChoiceResponses <- as.data.table(read.csv(file="input/multipleChoiceResponses.csv", strip.white = TRUE,
+                             na.strings=c("","NA"),
                              stringsAsFactors = TRUE))
 
-schema <- as.data.table(read.csv(file="schema.csv", strip.white = TRUE, 
-                             na.strings=c("","NA"), 
+schema <- as.data.table(read.csv(file="input/schema.csv", strip.white = TRUE,
+                             na.strings=c("","NA"),
                              stringsAsFactors = FALSE))
 
 ```
@@ -88,7 +106,7 @@ I also used a Country-Currency-Code list from github, as some of the analysis re
 # y <- read.csv(text = x)
 
 ## Reading downloaded csv method
-currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
+# currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
 
 # dput(droplevels(currency2CountryName[, lapply(.SD, as.character)]))
 ```
