@@ -1,17 +1,20 @@
 ---
-title: "kaggle-survey"
-author: "minghao"
-date: "October 21, 2017"
+title: "kaggle-survey 2017"
+date: "November 09, 2017"
 output: 
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
     toc_float: true
     df_print: tibble
+    number_sections: yes
+    code_folding: hide
 ---
 
 # Libraries
+
 ```{r, warning = FALSE, message=FALSE}
+#general
 library(purrr)
 require(tidyverse)
 require(data.table)
@@ -29,7 +32,7 @@ require(plotly)
 #NLP
 require(quanteda)
 require(wordcloud)
-require(slam)
+require(slam) # to facilliate row_sums with sparse matrix
 
 #map
 require(leaflet)
@@ -38,14 +41,26 @@ require(leaflet)
 require(igraph)
 ```
 
-Note that I made extensive use of data.table to extract, filter, process the data as that's the method that I'm most conformable with.
+* Note that I made extensive use of data.table packages instead of dplyr to extract, filter, process the data as it's the method that I'm most conformable with.
+
+* The majority ( of not all the plots) are donoe with highcharter.
+
+* Quanteda stem completion and tokenisation, while fast, seems slightly less flexible than those of tm/snowball package. 
+
+<br/>
+<hr/>
+<br/>
 
 # Data Input
 
-The following are data provided by Kaggle
+The .csv are data provided by Kaggle that includes a seperate .csv file for 
+
+* Conversion Rates ( with origin Country and exchange Rate)
+* freeformResponse ( For survey questions that accepted freeform inputs)
+* multipleChoiceResponse ( For survey questions that a list of selections are given ( sometimes mulitple selections are accepted)
 
 ```{r}
-
+#input for various csv files.
 conversionRates <- as.data.table(read.csv(file="conversionRates.csv", strip.white = TRUE, 
                              na.strings=c("","NA"), 
                              stringsAsFactors = FALSE))
@@ -64,7 +79,7 @@ schema <- as.data.table(read.csv(file="schema.csv", strip.white = TRUE,
 
 ```
 
-custom data that I used
+I also used a Country-Currency-Code list from github, as some of the analysis required country to currency mapping( to determine foreign currencies). Also, the Country Name in the given .csv are mapped to iso2 for plotting in hmap ( highchart's map).
 
 ```{r}
 ## Rcurl into data method
@@ -74,10 +89,174 @@ custom data that I used
 
 ## Reading downloaded csv method
 currency2CountryName <- data.table(read.csv("Country Currency Code Mappings.csv"))
+
+# dput(droplevels(currency2CountryName[, lapply(.SD, as.character)]))
 ```
 
+Raw dput input to get currency2CountryName into Kaggle
+```{r}
+currency2CountryName <-structure(list(Country = c("New Zealand", "Cook Islands", "Niue", 
+"Pitcairn", "Tokelau", "Australian", "Christmas Island", "Cocos (Keeling) Islands", 
+"Heard and Mc Donald Islands", "Kiribati", "Nauru", "Norfolk Island", 
+"Tuvalu", "American Samoa", "Andorra", "Austria", "Belgium", 
+"Finland", "France", "French Guiana", "French Southern Territories", 
+"Germany", "Greece", "Guadeloupe", "Ireland", "Italy", "Luxembourg", 
+"Martinique", "Mayotte", "Monaco", "Netherlands", "Portugal", 
+"Reunion", "Samoa", "San Marino", "Slovenia", "Spain", "Vatican City State (Holy See)", 
+"South Georgia and the South Sandwich Islands", "United Kingdom", 
+"Jersey", "British Indian Ocean Territory", "Guam", "Marshall Islands", 
+"Micronesia Federated States of", "Northern Mariana Islands", 
+"Palau", "Puerto Rico", "Turks and Caicos Islands", "United States", 
+"United States Minor Outlying Islands", "Virgin Islands (British)", 
+"Virgin Islands (US)", "Hong Kong", "Canada", "Japan", "Afghanistan", 
+"Albania", "Algeria", "Anguilla", "Antigua and Barbuda", "Dominica", 
+"Grenada", "Montserrat", "Saint Kitts", "Saint Lucia", "Saint Vincent Grenadines", 
+"Argentina", "Armenia", "Aruba", "Netherlands Antilles", "Azerbaijan", 
+"Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belize", 
+"Benin", "Burkina Faso", "Guinea-Bissau", "Ivory Coast", "Mali", 
+"Niger", "Senegal", "Togo", "Bermuda", "Bhutan", "India", "Bolivia", 
+"Botswana", "Bouvet Island", "Norway", "Svalbard and Jan Mayen Islands", 
+"Brazil", "Brunei Darussalam", "Bulgaria", "Burundi", "Cambodia", 
+"Cameroon", "Central African Republic", "Chad", "Congo Republic of the Democratic", 
+"Equatorial Guinea", "Gabon", "Cape Verde", "Cayman Islands", 
+"Chile", "China", "Colombia", "Comoros", "Congo-Brazzaville", 
+"Costa Rica", "Croatia (Hrvatska)", "Cuba", "Cyprus", "Czech Republic", 
+"Denmark", "Faroe Islands", "Greenland", "Djibouti", "Dominican Republic", 
+"East Timor", "Indonesia", "Ecuador", "Egypt", "El Salvador", 
+"Eritrea", "Ethiopia", "Estonia", "Falkland Islands (Malvinas)", 
+"Fiji", "French Polynesia", "New Caledonia", "Wallis and Futuna Islands", 
+"Gambia", "Georgia", "Gibraltar", "Guatemala", "Guinea", "Guyana", 
+"Haiti", "Honduras", "Hungary", "Iceland", "Iran (Islamic Republic of)", 
+"Iraq", "Israel", "Jamaica", "Jordan", "Kazakhstan", "Kenya", 
+"Korea North", "Korea South", "Kuwait", "Kyrgyzstan", "Lao PeopleÃ.s Democratic Republic", 
+"Latvia", "Lebanon", "Lesotho", "Liberia", "Libyan Arab Jamahiriya", 
+"Liechtenstein", "Switzerland", "Lithuania", "Macau", "Macedonia", 
+"Madagascar", "Malawi", "Malaysia", "Maldives", "Malta", "Mauritania", 
+"Mauritius", "Mexico", "Moldova Republic of", "Mongolia", "Morocco", 
+"Western Sahara", "Mozambique", "Myanmar", "Namibia", "Nepal", 
+"Nicaragua", "Nigeria", "Oman", "Pakistan", "Panama", "Papua New Guinea", 
+"Paraguay", "Peru", "Philippines", "Poland", "Qatar", "Romania", 
+"Russian Federation", "Rwanda", "Sao Tome and Principe", "Saudi Arabia", 
+"Seychelles", "Sierra Leone", "Singapore", "Slovakia (Slovak Republic)", 
+"Solomon Islands", "Somalia", "South Africa", "Sri Lanka", "Sudan", 
+"Suriname", "Swaziland", "Sweden", "Syrian Arab Republic", "Taiwan", 
+"Tajikistan", "Tanzania", "Thailand", "Tonga", "Trinidad and Tobago", 
+"Tunisia", "Turkey", "Turkmenistan", "Uganda", "Ukraine", "United Arab Emirates", 
+"Uruguay", "Uzbekistan", "Vanuatu", "Venezuela", "Vietnam", "Yemen", 
+"Zambia", "Zimbabwe"), CountryCode = c("NZ", "CK", "NU", "PN", 
+"TK", "AU", "CX", "CC", "HM", "KI", "NR", "NF", "TV", "AS", "AD", 
+"AT", "BE", "FI", "FR", "GF", "TF", "DE", "GR", "GP", "IE", "IT", 
+"LU", "MQ", "YT", "MC", "NL", "PT", "RE", "WS", "SM", "SI", "ES", 
+"VA", "GS", "GB", "JE", "IO", "GU", "MH", "FM", "MP", "PW", "PR", 
+"TC", "US", "UM", "VG", "VI", "HK", "CA", "JP", "AF", "AL", "DZ", 
+"AI", "AG", "DM", "GD", "MS", "KN", "LC", "VC", "AR", "AM", "AW", 
+"AN", "AZ", "BS", "BH", "BD", "BB", "BY", "BZ", "BJ", "BF", "GW", 
+"CI", "ML", "NE", "SN", "TG", "BM", "BT", "IN", "BO", "BW", "BV", 
+"NO", "SJ", "BR", "BN", "BG", "BI", "KH", "CM", "CF", "TD", "CG", 
+"GQ", "GA", "CV", "KY", "CL", "CN", "CO", "KM", "CD", "CR", "HR", 
+"CU", "CY", "CZ", "DK", "FO", "GL", "DJ", "DO", "TP", "ID", "EC", 
+"EG", "SV", "ER", "ET", "EE", "FK", "FJ", "PF", "NC", "WF", "GM", 
+"GE", "GI", "GT", "GN", "GY", "HT", "HN", "HU", "IS", "IR", "IQ", 
+"IL", "JM", "JO", "KZ", "KE", "KP", "KR", "KW", "KG", "LA", "LV", 
+"LB", "LS", "LR", "LY", "LI", "CH", "LT", "MO", "MK", "MG", "MW", 
+"MY", "MV", "MT", "MR", "MU", "MX", "MD", "MN", "MA", "EH", "MZ", 
+"MM", NA, "NP", "NI", "NG", "OM", "PK", "PA", "PG", "PY", "PE", 
+"PH", "PL", "QA", "RO", "RU", "RW", "ST", "SA", "SC", "SL", "SG", 
+"SK", "SB", "SO", "ZA", "LK", "SD", "SR", "SZ", "SE", "SY", "TW", 
+"TJ", "TZ", "TH", "TO", "TT", "TN", "TR", "TM", "UG", "UA", "AE", 
+"UY", "UZ", "VU", "VE", "VN", "YE", "ZM", "ZW"), Currency = c("New Zealand Dollars", 
+"New Zealand Dollars", "New Zealand Dollars", "New Zealand Dollars", 
+"New Zealand Dollars", "Australian Dollars", "Australian Dollars", 
+"Australian Dollars", "Australian Dollars", "Australian Dollars", 
+"Australian Dollars", "Australian Dollars", "Australian Dollars", 
+"Euros", "Euros", "Euros", "Euros", "Euros", "Euros", "Euros", 
+"Euros", "Euros", "Euros", "Euros", "Euros", "Euros", "Euros", 
+"Euros", "Euros", "Euros", "Euros", "Euros", "Euros", "Euros", 
+"Euros", "Euros", "Euros", "Euros", "Sterling", "Sterling", "Sterling", 
+"USD", "USD", "USD", "USD", "USD", "USD", "USD", "USD", "USD", 
+"USD", "USD", "USD", "HKD", "Canadian Dollar", "Japanese Yen", 
+"Afghani", "Lek", "Algerian Dinar", "East Caribbean Dollar", 
+"East Caribbean Dollar", "East Caribbean Dollar", "East Caribbean Dollar", 
+"East Caribbean Dollar", "East Caribbean Dollar", "East Caribbean Dollar", 
+"East Caribbean Dollar", "Peso", "Dram", "Netherlands Antilles Guilder", 
+"Netherlands Antilles Guilder", "Manat", "Bahamian Dollar", "Bahraini Dinar", 
+"Taka", "Barbadian Dollar", "Belarus Ruble", "Belizean Dollar", 
+"CFA Franc BCEAO", "CFA Franc BCEAO", "CFA Franc BCEAO", "CFA Franc BCEAO", 
+"CFA Franc BCEAO", "CFA Franc BCEAO", "CFA Franc BCEAO", "CFA Franc BCEAO", 
+"Bermudian Dollar", "Indian Rupee", "Indian Rupee", "Boliviano", 
+"Pula", "Norwegian Krone", "Norwegian Krone", "Norwegian Krone", 
+"Brazil", "Bruneian Dollar", "Lev", "Burundi Franc", "Riel", 
+"CFA Franc BEAC", "CFA Franc BEAC", "CFA Franc BEAC", "CFA Franc BEAC", 
+"CFA Franc BEAC", "CFA Franc BEAC", "Escudo", "Caymanian Dollar", 
+"Chilean Peso", "Yuan Renminbi", "Peso", "Comoran Franc", "Congolese Frank", 
+"Costa Rican Colon", "Croatian Dinar", "Cuban Peso", "Cypriot Pound", 
+"Koruna", "Danish Krone", "Danish Krone", "Danish Krone", "Djiboutian Franc", 
+"Dominican Peso", "Indonesian Rupiah", "Indonesian Rupiah", "Sucre", 
+"Egyptian Pound", "Salvadoran Colon", "Ethiopian Birr", "Ethiopian Birr", 
+"Estonian Kroon", "Falkland Pound", "Fijian Dollar", "CFP Franc", 
+"CFP Franc", "CFP Franc", "Dalasi", "Lari", "Gibraltar Pound", 
+"Quetzal", "Guinean Franc", "Guyanaese Dollar", "Gourde", "Lempira", 
+"Forint", "Icelandic Krona", "Iranian Rial", "Iraqi Dinar", "Shekel", 
+"Jamaican Dollar", "Jordanian Dinar", "Tenge", "Kenyan Shilling", 
+"Won", "Won", "Kuwaiti Dinar", "Som", "Kip", "Lat", "Lebanese Pound", 
+"Loti", "Liberian Dollar", "Libyan Dinar", "Swiss Franc", "Swiss Franc", 
+"Lita", "Pataca", "Denar", "Malagasy Franc", "Malawian Kwacha", 
+"Ringgit", "Rufiyaa", "Maltese Lira", "Ouguiya", "Mauritian Rupee", 
+"Peso", "Leu", "Tugrik", "Dirham", "Dirham", "Metical", "Kyat", 
+"Dollar", "Nepalese Rupee", "Cordoba Oro", "Naira", "Sul Rial", 
+"Rupee", "Balboa", "Kina", "Guarani", "Nuevo Sol", "Peso", "Zloty", 
+"Rial", "Leu", "Ruble", "Rwanda Franc", "Dobra", "Riyal", "Rupee", 
+"Leone", "Dollar", "Koruna", "Solomon Islands Dollar", "Shilling", 
+"Rand", "Rupee", "Dinar", "Surinamese Guilder", "Lilangeni", 
+"Krona", "Syrian Pound", "Dollar", "Tajikistan Ruble", "Shilling", 
+"Baht", "PaÃ.anga", "Trinidad and Tobago Dollar", "Tunisian Dinar", 
+"Lira", "Manat", "Shilling", "Hryvnia", "Dirham", "Peso", "Som", 
+"Vatu", "Bolivar", "Dong", "Rial", "Kwacha", "Zimbabwe Dollar"
+), Code = c("NZD", "NZD", "NZD", "NZD", "NZD", "AUD", "AUD", 
+"AUD", "AUD", "AUD", "AUD", "AUD", "AUD", "EUR", "EUR", "EUR", 
+"EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", 
+"EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", "EUR", 
+"EUR", "EUR", "EUR", "EUR", "GBP", "GBP", "GBP", "USD", "USD", 
+"USD", "USD", "USD", "USD", "USD", "USD", "USD", "USD", "USD", 
+"USD", "HKD", "CAD", "JPY", "AFN", "ALL", "DZD", "XCD", "XCD", 
+"XCD", "XCD", "XCD", "XCD", "XCD", "XCD", "ARS", "AMD", "ANG", 
+"ANG", "AZN", "BSD", "BHD", "BDT", "BBD", "BYR", "BZD", "XOF", 
+"XOF", "XOF", "XOF", "XOF", "XOF", "XOF", "XOF", "BMD", "INR", 
+"INR", "BOB", "BWP", "NOK", "NOK", "NOK", "BRL", "BND", "BGN", 
+"BIF", "KHR", "XAF", "XAF", "XAF", "XAF", "XAF", "XAF", "CVE", 
+"KYD", "CLP", "CNY", "COP", "KMF", "CDF", "CRC", "HRK", "CUP", 
+"CYP", "CZK", "DKK", "DKK", "DKK", "DJF", "DOP", "IDR", "IDR", 
+"ECS", "EGP", "SVC", "ETB", "ETB", "EEK", "FKP", "FJD", "XPF", 
+"XPF", "XPF", "GMD", "GEL", "GIP", "GTQ", "GNF", "GYD", "HTG", 
+"HNL", "HUF", "ISK", "IRR", "IQD", "ILS", "JMD", "JOD", "KZT", 
+"KES", "KPW", "KRW", "KWD", "KGS", "LAK", "LVL", "LBP", "LSL", 
+"LRD", "LYD", "CHF", "CHF", "LTL", "MOP", "MKD", "MGA", "MWK", 
+"MYR", "MVR", "MTL", "MRO", "MUR", "MXN", "MDL", "MNT", "MAD", 
+"MAD", "MZN", "MMK", "NAD", "NPR", "NIO", "NGN", "OMR", "PKR", 
+"PAB", "PGK", "PYG", "PEN", "PHP", "PLN", "QAR", "RON", "RUB", 
+"RWF", "STD", "SAR", "SCR", "SLL", "SGD", "SKK", "SBD", "SOS", 
+"ZAR", "LKR", "SDG", "SRD", "SZL", "SEK", "SYP", "TWD", "TJS", 
+"TZS", "THB", "TOP", "TTD", "TND", "TRY", "TMT", "UGX", "UAH", 
+"AED", "UYU", "UZS", "VUV", "VEF", "VND", "YER", "ZMK", "ZWD"
+)), .Names = c("Country", "CountryCode", "Currency", "Code"), row.names = c(NA, 
+-232L), class = c("data.table", 
+"data.frame"))
+```
 
-# Function
+<br/>
+<hr/>
+<br/>
+
+# Custom Functions
+
+Some custom function to ease the extraction of data, inspired by [AmberThomas](https://www.kaggle.com/amberthomas/kaggle-2017-survey-results) functions ( which I adapted the some of the regexp treatments. The three different functions are to 
+
+* MultipleChoice_func : To aggregate and summarise column in multipleChoiceResponses.csv that follows certain pattern. For example, multipleChoiceResponses(Country) would output a list of country with aggregated counts. Also the input will be melted into long format while aggregatation to various factor as in the case multipleChoiceResponses(Jobfactor) in which case there is multiple column of JobFactorCommute, JobFactorCompanyFunding etc 
+
+* MultipleChoiceOptions_func : For survey questions that accept multiple selection, since these columns require strsplit treatment before aggregation and summarising as the contents are stored in comma seperated list. Ie, MultipleChoiceOptions_func(PastJobTitlesSelect)
+
+* Wordclourd_func: applying dfm(quanteda) treatment on the freeformresponses related column to generated a wordfrequency df.
+
 
 ```{r}
 # To extract the patterns of response that would follow a similar pattern on counts per value
@@ -93,7 +272,7 @@ MultipleChoice_func = function(question, dt = multipleChoiceResponses){
     # Aggregate the counts
     .[,list(N=.N),
             by=c(eval(question), "value")] %>%
-    .[, percentage := signif(N/sum(N),2)*100] %>%
+    .[, percentage := signif(N/sum(N),3)*100] %>%
   # The output should be plotted and processed, the numbers are already aggregated
     .[order(-N)]
 }
@@ -127,6 +306,7 @@ MultipleChoiceOptions_func = function(question, dt = multipleChoiceResponses){
     .[order(-N)]
 }
 
+# This serve to construct a 1:2 tokenise document feature matrix (dfm) while removing stopwords etc, it will output a  wordfrequency df.
 Wordclourd_func = function(input, dt = freeformResponses){
   
   # Creating a document-feature matrix
@@ -150,18 +330,24 @@ Wordclourd_func = function(input, dt = freeformResponses){
 
 ```
 
-# Basic visualisation
+<br/>
+<hr/>
+<br/>
+
+# Basic visualisation {.tabset}
 
 This section depicts the some basic plots of survey, which could be used to explore the cross section data analysis with it's tabbed structure. 
 
 Initially,  I intended to look at into Pay vs Experience and Demographics of countries, but it has since grown up a bit.
 
-## Countries  {.tabset}
+<br/>
+
+## Countries
 
 ```{r}
-# Merging the records of country for China
-# in the raw data, China seems to be recorded as "People 's Republic of China", "Republic of China"
-multipleChoiceResponses<-multipleChoiceResponses[grep("China",Country), Country:= "China"]
+# Accounting for long names of Chinas..
+multipleChoiceResponses[Country=="People 's Republic of China", Country:= "China"]
+multipleChoiceResponses[Country=="Republic of China", Country:= "Taiwan"]
 
 # Dropping it from factors too
 multipleChoiceResponses<-droplevels(multipleChoiceResponses)
@@ -177,11 +363,17 @@ hchart(fct_infreq(multipleChoiceResponses$Country), "column") %>%
   hc_xAxis(text = "Countries", labels = list(rotation = 90))
   
 ```
-Merged the records of country for China (People 's Republic of China", "Republic of China). Also,  there are seperate entries for selection of Taiwan and Hong Kong. So while it may vary depending on your definition, the sum of the three entries would make it the third countries with most survey respondents, just after India.
+**People 's Republic of China - China** and  **Republic of China - Taiwan** is available for selective as seperate entries. Both of the names are coverted into shorter, one word form. Also, noted that there are seperate entries for selection for Hong Kong.
 
-Overall, the majority of the surveyed users are living in US and India. Interestingly, many users also selected "Others" categories ( Or perhaps their country is less represented in the data). Given that this is the survey result on Kaggle, this is probably little surprise. There might exist other data science platforms that are more popular in Other countries, especially if that country favor another language(China, Japan, Germany).
+Given that this is the results of a survey done on Kaggle, there would be some natural bias towards kaggle and english medium. There may exist other data science platforms that are more popular in Other countries, especially if that country's medium of communication is another languages(China, Japan, Germany).
 
-## Tenure  {.tabset}
+Also, the sum of the three entries(Taiwan, China, Hong Kong) would make China the third country with most popular with survey respondents, just after India.
+
+<br/>
+<hr/>
+<br/>
+
+## Tenure
 
 Tenure can probably be related to Working Experience, although, given that the question of tenure is directed to all,, this is a hazy indicator given that some might include their years of coding in their education (which typically isn't included in the years of working experience). There is no better alternative in exploring working experience though.
 
@@ -209,7 +401,11 @@ multipleChoiceResponses %>%
 ```
 
 
-## Code Writer {.tabset}
+<br/>
+<hr/>
+<br/>
+
+## Code Writer
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$CodeWriter), "column")%>%
@@ -222,14 +418,18 @@ hchart(fct_infreq(multipleChoiceResponses$CodeWriter), "column")%>%
 Interestingly, about one third of people dont work with codes. I can only think of three posible reasons, one is that they are moved up into project management roles that dont require them to work with codes. Second, they working in more of a analyst role dealing with the likes of tableau/excel or other data analyst software that dont require codes. Alternatively, it is possible that they are working in another field, and are looking to break into data science.
 
 
-## Job Title  {.tabset}
+<br/>
+<hr/>
+<br/>
+
+## Job Title
 
 ```{r}
-hchart(fct_infreq(multipleChoiceResponses$CurrentJobTitleSelect), "column")%>%
-  hc_title(text = "Job Title") %>%
-  hc_subtitle(text = paste("Q","[",eval(schema[Column=="CurrentJobTitleSelect", Asked]),"]",
-                           eval(schema[Column=="CurrentJobTitleSelect", Question])
-                           ))
+# hchart(fct_infreq(multipleChoiceResponses$CurrentJobTitleSelect), "column")%>%
+#   hc_title(text = "Job Title") %>%
+#   hc_subtitle(text = paste("Q","[",eval(schema[Column=="CurrentJobTitleSelect", Asked]),"]",
+#                            eval(schema[Column=="CurrentJobTitleSelect", Question])
+#                            ))
 
 
 ## Creating a list of Popular job title - Aggregate Job Title
@@ -239,28 +439,100 @@ AggrJobTitle <- multipleChoiceResponses %>%
                         .N, 
     by = CurrentJobTitleSelect] %>%
   .[order(-N)]
+
+
+
+# Calculating percentage of respondents for each factor
+CurrentJobTitleSelect.Select <- multipleChoiceResponses %>%
+  .[!is.na(CurrentJobTitleSelect)] %>%
+  .[,  .N,  by = CurrentJobTitleSelect] %>%
+  .[, percent:= signif(N/sum(N)*100,3)] %>%
+  .[order(-N)]
+
+# Highchart with column and pie chart (percentage)
+highchart() %>%
+  hc_add_series(CurrentJobTitleSelect.Select, "column", 
+                hcaes(x = CurrentJobTitleSelect, y = N), name = "column") %>%
+  hc_add_series(CurrentJobTitleSelect.Select, "pie", 
+                hcaes(name = CurrentJobTitleSelect, y = percent), name = "Bars") %>%
+   # Optiosn for each type of series
+  hc_plotOptions(
+    series = list(
+      showInLegend = FALSE,
+      pointFormat = "{point.y}%"
+    ),
+    column = list(
+      colorByPoint = TRUE
+      ),
+    pie = list(
+      colorByPoint = TRUE, center = c('30%', '10%'),
+      size = 120, dataLabels = list(enabled = FALSE)
+    )) %>%
+  # Axis
+  hc_xAxis(categories = CurrentJobTitleSelect.Select$CurrentJobTitleSelect) %>%
+  #Title & Subtitle
+         hc_title(text = "CurrentJobTitleSelect")
+
 ```
 
 Evidently, Data Scientist, Software Developer, Data analyst and Scientist/Researh are most popular. I  am puzzle by what is the difference between Scientist/Research and Research (Maybe Education might shed a light?), perhaps they should be aggregated into a single option? Though in that case they will be the 3rd most popular job title, even before Data analyst
 
 
+<br/>
+<hr/>
+<br/>
 
-## Past Job title  {.tabset}
+## Past Job title
+
+<br/>
 
 ###Select
 
 ```{r}
-t.WTF <- MultipleChoiceOptions_func("PastJobTitlesSelect")
+Agg_PastJobTitle <- MultipleChoiceOptions_func("PastJobTitlesSelect")
   
-hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
-                                   options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
-         hc_title(text = "PastJobTitlesSelect") %>%
+Agg_PastJobTitle %>%
+  .[, percentage :=signif(N/sum(N),3)*100,]
+
+# hchart(Agg_PastJobTitle, type="column", hcaes(x = value, y = N, group = value),
+#                                    options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+#          hc_title(text = "PastJobTitlesSelect") %>%
+#          hc_subtitle(text = paste("Q",
+#                                   "[",eval(schema[Column=="PastJobTitlesSelect", Asked]),"]",
+#                                   eval(schema[Column=="PastJobTitlesSelect", Question])
+#          ))
+
+# Highchart with column and pie chart (percentage)
+highchart() %>%
+  hc_add_series(Agg_PastJobTitle, "column", 
+                hcaes(x = value, y = N), name = "column") %>%
+  hc_add_series(Agg_PastJobTitle, "pie", 
+                hcaes(name = value, y = percentage), name = "Bars") %>%
+   # Optiosn for each type of series
+  hc_plotOptions(
+    series = list(
+      showInLegend = FALSE,
+      pointFormat = "{point.y}%"
+    ),
+    column = list(
+      colorByPoint = TRUE
+      ),
+    pie = list(
+      colorByPoint = TRUE, center = c('30%', '10%'),
+      size = 120, dataLabels = list(enabled = FALSE)
+    )) %>%
+  # Axis
+  hc_xAxis(categories = Agg_PastJobTitle$value) %>%
+  #Title & Subtitle
+         hc_title(text = "PastJobTitle") %>%
          hc_subtitle(text = paste("Q",
                                   "[",eval(schema[Column=="PastJobTitlesSelect", Asked]),"]",
                                   eval(schema[Column=="PastJobTitlesSelect", Question])
          ))
 
 ```
+
+ <br/>
  
 ### FreeForm
 
@@ -270,55 +542,35 @@ hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
 nrow(freeformResponses[!is.na(PastJobTitlesFreeForm)])
 # 2094
 
-t.WTF<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
+PastJobTitle_WordFreq<-setDT(Wordclourd_func("PastJobTitlesFreeForm")) %>%
   .[order(-num)] %>%
   .[num>20,] %>%
-  .[, percent:=num/sum(num)*100, ]
+  .[, percent:=signif(num/sum(num)*100, 3), ]
   
 
-hchart(t.WTF, type="column", hcaes(x = term, y = num))
+# hchart(t.WTF, type="column", hcaes(x = term, y = num))
 
 
 highchart() %>%   
-  hc_add_series(t.WTF, "column", hcaes(x = term, y = num), name = "column") %>%
-  hc_add_series(t.WTF, "pie", hcaes(name = term, y = percent), name = "Bars")
+  hc_add_series(PastJobTitle_WordFreq, "column", hcaes(x = term, y = num), name = "column") %>%
+  hc_add_series(PastJobTitle_WordFreq, "pie", hcaes(name = term, y = percent), name = "Bars")  %>%  # Axis
+  hc_xAxis(categories = PastJobTitle_WordFreq$term) %>% #Title & Subtitle
+         hc_title(text = "PastJobTitlesFreeForm") %>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="PastJobTitlesFreeForm", Asked]),"]",
+                                  eval(schema[Column=="PastJobTitlesFreeForm", Question])
+         ))
 ```
 
-## Job Factor  {.tabset}
 
-```{r}
-# Extracting all column that cosist of JobFactor string.
-JobFactor.Select <- MultipleChoice_func("JobFactor")
-
-JobFactor.MSelect <- JobFactor.Select %>%
-  .[, .(percent=sum(percentage)), by = JobFactor]
-
-# hchart(t.WTF, type="column", hcaes(x = JobFactor, y = N, group = value),
-                                   # options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
-         # hc_title(text = "JobFactor") 
-
-highchart() %>%   
-  hc_add_series(JobFactor.Select, "column", hcaes(x = JobFactor, y = N, group = value), name = "column") %>%
-  hc_add_series(JobFactor.MSelect, "pie", hcaes(name = JobFactor, y = percent), name = "Bars") %>% 
-   # Optiosn for each type of series
-  hc_plotOptions(
-    series = list(
-      showInLegend = FALSE,
-      pointFormat = "{point.y}%"
-    ),
-    pie = list(
-      colorByPoint = TRUE, center = c('30%', '10%'),
-      size = 120, dataLabels = list(enabled = FALSE)
-    )) %>%
-  # Axis
-  hc_xAxis(categories = JobFactor.Select$JobFactor) %>%
-  #Title & Subtitle
-         hc_title(text = "JobFactor")
-
-```
  The Majority learners seems to think that their Job title are a somewat important. Although surprisingly, not all of the learners hold job title in an important place
 
-## Age  {.tabset}
+
+<br/>
+<hr/>
+<br/>
+
+## Age
 
 ```{r}
 hchart(multipleChoiceResponses$Age, na.rm =T)%>%
@@ -360,7 +612,11 @@ As noted by other kernals, most the respondents of the survey are young, most li
 #       ))))
 ```
 
-## Career Switcher  {.tabset}
+<br/>
+<hr/>
+<br/>
+
+## Career Switcher
 
 ```{r}
 hchart(fct_infreq(multipleChoiceResponses$CareerSwitcher), na.rm =T,
@@ -370,29 +626,29 @@ hchart(fct_infreq(multipleChoiceResponses$CareerSwitcher), na.rm =T,
                            eval(schema[Column=="CareerSwitcher", Question])
                            ))
 ```
+Plenty seems are intending to turn towards data science, well. This is probably the reason why most of us are here anyway. To learn , practice and prove ourselves.
 
-## Salary Change  {.tabset}
+<br/>
+<hr/>
+<br/>
+
+## Salary Change
 
 ```{r}
-hchart(fct_infreq(multipleChoiceResponses$SalaryChange), na.rm =T,
-       options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
-    hc_title(text = "SalaryChange") %>%
-  hc_subtitle(text = paste("Q","[",eval(schema[Column=="SalaryChange", Asked]),"]",
-                           eval(schema[Column=="SalaryChange", Question])
-                           ))
+# hchart(fct_infreq(multipleChoiceResponses$SalaryChange), na.rm =T,
+#        options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
+#     hc_title(text = "SalaryChange") %>%
+#   hc_subtitle(text = paste("Q","[",eval(schema[Column=="SalaryChange", Asked]),"]",
+#                            eval(schema[Column=="SalaryChange", Question])
+#                            ))
 
 
 # Extracting all column that cosist of JobFactor string.
 SalaryChange.Select <- MultipleChoice_func("SalaryChange")
 
-SalaryChange.MSelect <- SalaryChange.Select %>%
-  .[, .(percent=signif(sum(percentage)*100, 3)), by = value]
-
-
-
 highchart() %>%   
   hc_add_series(SalaryChange.Select, "column", hcaes(x = value, y = N), name = "column") %>%
-  hc_add_series(SalaryChange.MSelect, "pie", hcaes(name = value, y = percent), name = "Bars") %>% 
+  hc_add_series(SalaryChange.Select, "pie", hcaes(name = value, y = percentage), name = "Bars") %>% 
    # Optiosn for each type of series
   hc_plotOptions(
     series = list(
@@ -409,7 +665,10 @@ highchart() %>%
   # Axis
   hc_xAxis(categories = SalaryChange.Select$value) %>%
   #Title & Subtitle
-         hc_title(text = "SalaryChange")
+         hc_title(text = "SalaryChange") %>%
+  hc_subtitle(text = paste("Q","[",eval(schema[Column=="SalaryChange", Asked]),"]",
+                           eval(schema[Column=="SalaryChange", Question])
+                           ))
 
 ```
 
@@ -417,7 +676,7 @@ Wow, most people saw a 20% increase in salary over 3 years. Guess Data science i
 
 
 
-## Remote Work  {.tabset}
+## Remote Work
 
 ```{r}
 hchart(multipleChoiceResponses$RemoteWork, na.rm =T)%>%
@@ -427,14 +686,13 @@ hchart(multipleChoiceResponses$RemoteWork, na.rm =T)%>%
                            ))
 ```
 
-## Currency  {.tabset}
+## Currency
 
-Sadly, the conversionRates provided gave only "OriginCountry" (USD, EUR, AUD etc) and "conversionRates"  (in numerics with USD as base line). I find the "OriginCountry" to be somewat misleading, as it is more of a Currency Code than Country.
+The only meaningful column in the ConversionRates provided along with survey results are 
 
-One will have to relate that to Country Name before joining the ConversionRates into multipleChoiceResponses. The following codes attempts several joins
+* OriginCountry : (USD, EUR, AUD) which is more indicative of currency, the column name is somewat misleading. 
 
-conversionRates -> currency2CountryName -> multipleChoiceResponses
-(where -> = join into ).
+* conversionRates : Respective conversion rates of various currencies to USD. 
 
 ```{r}
 # # Cleaning up Conversion Rates, removing X which seems to be a raw ID
@@ -442,7 +700,11 @@ conversionRates$X=NULL
 
 # # Renaming conversionRates to facillate easier join
 colnames(conversionRates) <- c("Code", "ExchangeRate")
+```
 
+The conversion rates dt need to be joined with the country-currencies input, which can be used to indentify the original currencies of the respective countries, allowing us to identify number of individual earning foreign currencies.
+
+```{r}
 # # joining currency2CountryName and conversionRates together
 Currency2CountryConversion <- currency2CountryName[conversionRates, on=.(Code)]
 
@@ -469,20 +731,44 @@ multipleChoiceResponses <- Currency2CountryConversion[] %>%
 # # Changing columns into as.character to facillitate comparison for later section
 multipleChoiceResponses[, c("Code", "CompensationCurrency"):=lapply(.SD, as.character), .SDcols=c("Code", "CompensationCurrency")]
 
-# class(multipleChoiceResponses$CompensationCurrency)
+
+
 
 # Comparison
 # unique(multipleChoiceResponses[CompensationCurrency==Code,.(CompensationCurrency, Code)])
 ```
 
-## Learning Platform Select  {.tabset}
+### Currency Codes & Map
+
 ```{r}
-schema[Column=="LearningPlatformSelect", Question]
+data(worldgeojson, package = "highcharter")
 
-t.WTF <- MultipleChoiceOptions_func("LearningPlatformSelect") 
+# # Plotting for highcharter map
+# hcmap(mapData = worldgeojson,
+#       download_map_data=FALSE,
+#       data = Currency2CountryConversion, value = "ExchangeRate",
+#       joinBy = c("iso-a2", "CountryCode"), name = "Demography")
+
+## while with download_map_data=FALSE, it doesn't require one to load external geojson data (doesn't work for kaggle) , I ran into html parse error when kniting.
+
+Currency2CountryConversion$"iso-a2" <- Currency2CountryConversion$CountryCode
+Currency2CountryConversion$iso2 <- Currency2CountryConversion$CountryCode
+Currency2CountryConversion$value <- Currency2CountryConversion$ExchangeRate
+ 
+highchart()%>%
+  hc_add_series_map(worldgeojson, df = Currency2CountryConversion, value = "value", joinBy = "iso2",
+                    dataLabels = list(enabled = TRUE,
+                                      format = '{point.name}'))
+```
 
 
-hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
+## Learning Platform Select
+
+```{r}
+Agg_LearningPlatformSelect <- MultipleChoiceOptions_func("LearningPlatformSelect") 
+
+
+hchart(Agg_LearningPlatformSelect, type="column", hcaes(x = value, y = N, group = value),
                                    options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
   # title and subtitle
          hc_title(text = "LearningPlatformSelect") %>%
@@ -494,67 +780,10 @@ hchart(t.WTF, type="column", hcaes(x = value, y = N, group = value),
 
 ```
 
-## Learning Platform Usefulness  {.tabset}
+Obviously, as this is a survey done on Kaggle, there would be a huge bias towards Kaggle. Other popular medium of learning are Online Courses, Personal Projects, Blogs and Youtube Videos.
 
-```{r}
-# Extracting values for column plot
-Agg_LearningPlatform <- MultipleChoice_func("LearningPlatformUsefulness") 
 
-# Values for spline plot
-Avg_LearningPlatform <- Agg_LearningPlatform %>%
-  .[value == "Very useful", score := 2] %>%
-  .[value == "Somewhat useful", score := 1] %>%
-  .[value == "Not Useful", score := 0] %>%
-  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(LearningPlatformUsefulness)]
-
-# hchart(Agg_LearningPlatform, type="column", hcaes(x = LearningPlatformUsefulness, y = N, group = value), options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
-#   # title and subtitle
-#          hc_title(text = "LearningPlatformUsefulness") 
-
-# Double y axis highchart
-highchart() %>%
-  hc_yAxis_multiples(
-    list(lineWidth = 3, title = list(text="N")),
-    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
-  ) %>%
-  hc_add_series(Agg_LearningPlatform, "column", hcaes(x = LearningPlatformUsefulness
-                                                      , y = N, group = value)) %>%
-  hc_add_series(Avg_LearningPlatform, "spline", hcaes(x = LearningPlatformUsefulness, y = Average), name = "AvgScore",  yAxis = 1) %>%
-  hc_xAxis(categories = Avg_LearningPlatform$LearningPlatformUsefulness)%>%
-  # title and subtitle
-         hc_title(text = "LearningPlatformUsefulness")
-```
-
-## Work Tools Frequency  {.tabset}
-
-```{r}
-# Extracting values for column plot
-Agg_WorkToolsFre  <- MultipleChoice_func("WorkToolsFrequency") 
-# hchart(t.WTF, type="column", hcaes(x = WorkToolsFrequency, y = N, group = value))
-
-# Values for spline plot
-Avg_WorkToolsFre <- Agg_WorkToolsFre %>%
-  .[value == "Often", score := 3] %>%
-  .[value == "Most of the time", score := 2] %>%
-  .[value == "Sometimes", score := 1] %>%
-  .[value == "Rarely", score := 0] %>%
-  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(WorkToolsFrequency)]
-
-# Double y axis highchart
-highchart() %>%
-  hc_yAxis_multiples(
-    list(lineWidth = 3, title = list(text="N")),
-    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
-  ) %>%
-  hc_add_series(Agg_WorkToolsFre, "column", hcaes(x = WorkToolsFrequency
-                                                      , y = N, group = value)) %>%
-  hc_add_series(Avg_WorkToolsFre, "spline", hcaes(x = WorkToolsFrequency, y = Average), name = "AvgScore",  yAxis = 1) %>%
-  hc_xAxis(categories = Avg_WorkToolsFre$WorkToolsFrequency)%>%
-  # title and subtitle
-         hc_title(text = "LearningPlatformUsefulness")
-```
-
-## Proving your worth  {.tabset}
+## Proving your worth
 
 ### Proven Knowledge Select
 
@@ -594,9 +823,7 @@ highchart() %>%
   ))
 ```
 
-Evidently, for learners, the majority think that working experience is the most important method to prove their know how of DS/ML. This is followed by Kaggle competitions, Online courses and Github Portfolio. 
-
-I think this selections has limited the respondents to choose only amount the listed choices (ie, bias in that most people could not be bother to select "Other" option). Among the choice I think that are missing from the list are projects, open-sourced packages contributions, blogs and publication
+Evidently, the majority learners think that working experience is the most important methods to prove their knowledge of DS/ML. This is followed by Kaggle competitions, Online courses and Github Portfolio. 
 
 ### Proven Knowledge FreeForm
 
@@ -609,21 +836,64 @@ wordcloud(ProveKnowledge_FreeForm$term, ProveKnowledge_FreeForm$num, max.words =
 
 Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to fill the free form data.
 
-## Algorithm Understanding  {.tabset}
+I think this previous selections has  for proven knowledge has limited the respondents to choose only amount the listed choices (ie, bias in the sense that most people are unlikely to select "Other" option and fill in projects, instead prefer to choose amount the available options). Among the choice I think that are missing from the list are projects, open-sourced packages contributions, blogs and publication.
+
+## Algorithm Understanding
 
 ```{r}
-hchart(multipleChoiceResponses$AlgorithmUnderstandingLevel, na.rm =T)%>%
-    hc_title(text = "AlgorithmUnderstandingLevel") %>%
-  hc_subtitle(text = paste("Q","[",eval(schema[Column=="AlgorithmUnderstandingLevel", Asked]),"]",
-                           eval(schema[Column=="AlgorithmUnderstandingLevel", Question])
-                           ))
+# hchart(multipleChoiceResponses$AlgorithmUnderstandingLevel, na.rm =T)%>%
+#     hc_title(text = "AlgorithmUnderstandingLevel") %>%
+#   hc_subtitle(text = paste("Q","[",eval(schema[Column=="AlgorithmUnderstandingLevel", Asked]),"]",
+#                            eval(schema[Column=="AlgorithmUnderstandingLevel", Question])
+#                            ))
+# head(multipleChoiceResponses$AlgorithmUnderstandingLevel)
+
+# Calculating percentage of respondents for each factor
+AlgorithmUnderstanding.Select <- multipleChoiceResponses %>%
+  .[!is.na(AlgorithmUnderstandingLevel)] %>%
+  .[,  .N,  by = AlgorithmUnderstandingLevel] %>%
+  .[, percent:= signif(N/sum(N)*100,2)] %>%
+  .[order(-N)]
+
+# Highchart with column and pie chart (percentage)
+highchart() %>%
+  hc_add_series(AlgorithmUnderstanding.Select, "column", 
+                hcaes(x = AlgorithmUnderstandingLevel, y = N), name = "column") %>%
+  hc_add_series(AlgorithmUnderstanding.Select, "pie", 
+                hcaes(name = AlgorithmUnderstandingLevel, y = percent), name = "Bars") %>%
+   # Optiosn for each type of series
+  hc_plotOptions(
+    series = list(
+      showInLegend = FALSE,
+      pointFormat = "{point.y}%"
+    ),
+    column = list(
+      colorByPoint = TRUE
+      ),
+    pie = list(
+      colorByPoint = TRUE, center = c('30%', '10%'),
+      size = 120, dataLabels = list(enabled = FALSE)
+    )) %>%
+  # Axis
+  hc_xAxis(categories = AlgorithmUnderstanding.Select$AlgorithmUnderstandingLevel) %>%
+  #Title & Subtitle
+         hc_title(text = "AlgorithmUnderstandingLevel")
+
+
 ```
 
 
-## Impactful Algorithm FreeForm  {.tabset}
+## Impactful Algorithm FreeForm
 
+Question
 ```{r}
 schema[Column=="ImpactfulAlgorithmFreeForm", Question]
+```
+
+Wordcloud plots 
+
+```{r}
+
 
 # ImpactfulAlgorithmFreeForm
 ImpactfulAlgorithm_FreeForm <-  Wordclourd_func("ImpactfulAlgorithmFreeForm")
@@ -631,6 +901,273 @@ wordcloud(ImpactfulAlgorithm_FreeForm$term, ImpactfulAlgorithm_FreeForm$num, max
            random.order=FALSE, colors=brewer.pal(8,"Dark2"), rot.per=.3, scale=c(3,.5))
 
 ```
+
+Well regression is still the most impactful algorithm, I guess it pays to be simple and easily interpretable. All other popular algorithm such as random forest, neural network, logistic regression are also mentioned.
+
+# Mixed Visualisation
+
+Most of the kernals that I had seen looks to explore the surveys results with barcharts. While it easily shows which are the most popular factor, the bar chart may appear misleading if there are less people submitting response for a particular section, or that the respondents are divided, dividing into two extremes. Some respondents may just not be familier with a particular option.
+
+I attributed each availabe factor to a linear scale (not that it has to be linear), such a that for a 3 factor list, it would be considered as 0, 1, 2 instead, the higher number are giving to a more favourable condition ( the higher the better). 
+
+Also, since the list of questions are identical for a particular extraction of datasets ( ie Job Factor, I will just adapt a random one of the exact question from the scheme to depict the question clearly).
+
+## Job Factor
+
+```{r}
+# Extracting all column that cosist of JobFactor string.
+JobFactor.Select <- MultipleChoice_func("JobFactor")%>%
+  .[order(JobFactor)]
+
+## Calculating percentage of respondents for each factor, though this segments of codes is disable as the precentage doesn't seem meaningful
+# JobFactor.MSelect <- JobFactor.Select %>%
+  # .[, .(percent=sum(percentage)), by = JobFactor]
+
+# hchart(t.WTF, type="column", hcaes(x = JobFactor, y = N, group = value),
+                                   # options3d = list(enabled = TRUE, beta = 1, alpha = 1))%>%
+         # hc_title(text = "JobFactor") 
+
+
+## Highchart with column and pie chart (percentage)
+# highchart() %>%   
+#   hc_add_series(JobFactor.Select, "column", hcaes(x = JobFactor, y = N, group = value), name = "column") %>%
+#   hc_add_series(JobFactor.MSelect, "pie", hcaes(name = JobFactor, y = percent), name = "Bars") %>% 
+#    # Optiosn for each type of series
+#   hc_plotOptions(
+#     series = list(
+#       showInLegend = FALSE,
+#       pointFormat = "{point.y}%"
+#     ),
+#     pie = list(
+#       colorByPoint = TRUE, center = c('30%', '10%'),
+#       size = 120, dataLabels = list(enabled = FALSE)
+#     )) %>%
+#   # Axis
+#   hc_xAxis(categories = JobFactor.Select$JobFactor) %>%
+#   #Title & Subtitle
+#          hc_title(text = "JobFactor")
+
+# Values for spline plot
+Avg_JobFactor <- JobFactor.Select %>%
+  .[value == "Very Important", score := 2] %>%
+  .[value == "Somewhat important", score := 1] %>%
+  .[value == "Not important", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(JobFactor)]%>%
+  .[order(JobFactor)]
+
+# Double y axis highchart
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
+  ) %>%
+  hc_add_series(JobFactor.Select, "column", 
+                hcaes(x = JobFactor, y = N, group = value)) %>%
+  hc_add_series(Avg_JobFactor, "spline", hcaes(x = JobFactor, y = Average), 
+                name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_JobFactor$JobFactor)%>%
+  # title and subtitle
+         hc_title(text = "JobFactor.Select")%>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="JobFactorTitle",
+                                                  Asked]),"]",
+                                  eval(schema[Column=="JobFactorTitle",
+                                              Question])
+                                  )) 
+
+```
+
+Interestingly, while the bar chart shows that company/funding is also rather important, there exist a certain segments of individuals who think it is not as important (thereby lowering the score). 
+
+Overall, I think the spine plot better depicts Learners' preferance for opportunities in Learning, Office, Salary, Languages and Management. Value concepts and abtracts notions such as diversity and leader reputation are second to their consideration. This seems better comfort to the my normal expectations.
+
+## Learning Platform Usefulness
+
+```{r}
+# Extracting values for column plot
+Agg_LearningPlatform <- MultipleChoice_func("LearningPlatformUsefulness") %>%
+  .[order(LearningPlatformUsefulness)]
+
+# Values for spline plot
+Avg_LearningPlatform <- Agg_LearningPlatform %>%
+  .[value == "Very useful", score := 2] %>%
+  .[value == "Somewhat useful", score := 1] %>%
+  .[value == "Not Useful", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(LearningPlatformUsefulness)]%>%
+  .[order(LearningPlatformUsefulness)]
+
+
+# hchart(Agg_LearningPlatform, type="column", hcaes(x = LearningPlatformUsefulness, y = N, group = value), options3d = list(enabled = TRUE, beta = 1, alpha = 1)) %>%
+#   # title and subtitle
+#          hc_title(text = "LearningPlatformUsefulness") 
+
+# Double y axis highchart
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
+  ) %>%
+  hc_add_series(Agg_LearningPlatform, "column", hcaes(x = LearningPlatformUsefulness
+                                                      , y = N, group = value)) %>%
+  hc_add_series(Avg_LearningPlatform, "spline", hcaes(x = LearningPlatformUsefulness, y = Average), name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_LearningPlatform$LearningPlatformUsefulness)%>%
+  # title and subtitle
+         hc_title(text = "LearningPlatformUsefulness")%>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="LearningPlatformUsefulnessArxiv",
+                                                  Asked]),"]",
+                                  eval(schema[Column=="LearningPlatformUsefulnessArxiv",
+                                              Question])
+                                  )) 
+# Since the schema's question is the same for all of the learning platform usefulness, I will just use the one from Arxiv
+```
+
+* Projects are the most useful, followed by Course. Then, we have Kaggle that is tied with SO at 1.61 score.
+* Tutoring is ranked quite high, despite its small population
+
+## Work Tools Frequency
+
+```{r}
+# Extracting values for column plot
+Agg_WorkToolsFre  <- MultipleChoice_func("WorkToolsFrequency") %>%
+  .[order(WorkToolsFrequency)]
+# hchart(t.WTF, type="column", hcaes(x = WorkToolsFrequency, y = N, group = value))
+
+# Values for spline plot
+Avg_WorkToolsFre <- Agg_WorkToolsFre %>%
+  .[value == "Often", score := 3] %>%
+  .[value == "Most of the time", score := 2] %>%
+  .[value == "Sometimes", score := 1] %>%
+  .[value == "Rarely", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(WorkToolsFrequency)]%>%
+  .[order(WorkToolsFrequency)]
+
+# Double y axis highchart
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 3"))
+  ) %>%
+  hc_add_series(Agg_WorkToolsFre, "column", hcaes(x = WorkToolsFrequency
+                                                      , y = N, group = value)) %>%
+  hc_add_series(Avg_WorkToolsFre, "spline", hcaes(x = WorkToolsFrequency, y = Average), name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_WorkToolsFre$WorkToolsFrequency, labels = list(rotation=90))%>%
+  # title and subtitle
+         hc_title(text = "WorkToolsFrequency")%>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="WorkToolsFrequencyAWS",
+                                                  Asked]),"]",
+                                  eval(schema[Column=="WorkToolsFrequencyAWS",
+                                              Question])
+                                  )) 
+```
+
+
+
+Although Python and R proved to be most popular options depicted in the bar chart, the rank with the AvgScore would better illustrate the usefulness of a particular worktool.
+
+By the ranks
+1. Unix
+2. SQL
+3. Python
+4. Select
+5. Jupyter
+6. R
+
+I'm rather surprise to see "Select" here. Especially when it scored rather low on the WorkMethodsFrequency.
+
+## Job Skill Importance
+
+```{r}
+# Extracting values for column plot
+Agg_JobSkillImportance <- MultipleChoice_func("JobSkillImportance") %>%
+  .[order(JobSkillImportance)]
+
+# Values for spline plot
+Avg_JobSkillImportance <- Agg_JobSkillImportance %>%
+  .[value == "Necessary", score := 2] %>%
+  .[value == "Nice to have", score := 1] %>%
+  .[value == "Unnecessary", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(JobSkillImportance)]%>%
+  .[order(JobSkillImportance)]
+
+# Double y axis highchart
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 2"))
+  ) %>%
+  hc_add_series(Agg_JobSkillImportance, "column", hcaes(x = JobSkillImportance
+                                                      , y = N, group = value)) %>%
+  hc_add_series(Avg_JobSkillImportance, "spline", hcaes(x = JobSkillImportance, y = Average), name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_JobSkillImportance$JobSkillImportance)%>%
+  # title and subtitle
+         hc_title(text = "JobSkillImportance")%>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="JobSkillImportanceR",
+                                                  Asked]),"]",
+                                  eval(schema[Column=="JobSkillImportanceR",
+                                              Question])
+                                  )) 
+# The schema's question is the same for all of the skill important
+
+```
+
+
+Importance by the ranks of Average Score.
+1. Python
+2. Stats
+3. Visualisations
+4. SQL
+5. R
+
+
+## Work Methods Frequency
+
+```{r}
+# Extracting values for column plot
+Agg_WorkMethodsFrequency <- MultipleChoice_func("WorkMethodsFrequency") %>%
+  .[order(WorkMethodsFrequency)]
+
+# Values for spline plot
+Avg_WorkMethodsFrequency  <- Agg_WorkMethodsFrequency %>%
+  .[value == "Often", score := 3] %>%
+  .[value == "Most of the time", score := 2] %>%
+  .[value == "Sometimes", score := 1] %>%
+  .[value == "Rarely", score := 0] %>%
+  .[,list(Average = signif(mean(score*N)/mean(N),3)),by=list(WorkMethodsFrequency )]%>%
+  .[order(WorkMethodsFrequency)]
+
+
+# Double y axis highchart
+highchart() %>%
+  hc_yAxis_multiples(
+    list(lineWidth = 3, title = list(text="N")),
+    list(showLastLabel = FALSE, opposite = T, title = list(text="Score Out of 3"))
+  ) %>%
+  hc_add_series(Agg_WorkMethodsFrequency, "column", hcaes(x = WorkMethodsFrequency, 
+                                                          y = N, group = value)) %>%
+  hc_add_series(Avg_WorkMethodsFrequency, "spline", hcaes(x = WorkMethodsFrequency, 
+                                                          y = Average), name = "AvgScore",  yAxis = 1) %>%
+  hc_xAxis(categories = Avg_WorkMethodsFrequency$WorkMethodsFrequency)%>%
+  # title and subtitle
+         hc_title(text = "WorkMethodsFrequency")%>%
+         hc_subtitle(text = paste("Q",
+                                  "[",eval(schema[Column=="WorkMethodsFrequencyA/B",
+                                                  Asked]),"]",
+                                  eval(schema[Column=="WorkMethodsFrequencyA/B",
+                                              Question])
+                                  )) 
+
+```
+
+By the ranks of Average Score.
+1. Data Visualisation
+2. Cross
+3. GBM - tied 
+4. LogisticRegression  - tied 
+
+Not sure what to make of "Select" low average score, perhaps it is just not popular with worker?
 
 # Interesting combination
 
@@ -674,7 +1211,7 @@ t.vertices <- JobNetworkPlot_dt %>%
   # Removing those who arent/ havent start working
   .[!value=="I haven't started working yet"] %>%
   .[,list(Frequency=.N), by = value]%>%
-  .[,Previous_percent:=signif(Frequency/sum(Frequency)*100,2)]
+  .[,Previous_percent:=signif(Frequency/sum(Frequency)*100,3)]
 
 t.vertices_w_current <- multipleChoiceResponses %>%
   .[is.na(CurrentJobTitleSelect), CurrentJobTitleSelect:="Not given"] %>%
@@ -682,7 +1219,7 @@ t.vertices_w_current <- multipleChoiceResponses %>%
   setnames(.,  c("value", "N")) %>%
   .[, value := as.character(value)] %>%
   .[t.vertices, on ="value" ] %>%
-  .[,Current_percent:=signif(N/sum(N, na.rm = T)*100,2)]
+  .[,Current_percent:=signif(N/sum(N, na.rm = T)*100,3)]
 
 ## Making network list with igraph
 net <- graph_from_data_frame(d=t.links, vertices =t.vertices_w_current, directed=T) 
@@ -697,13 +1234,41 @@ V(net)$color <- colorize(membership(wc))
 # V(net)$betweenness <- betweenness(net)
 # V(net)$color <- colorize(V(net)$betweenness)
 # V(net)$degree <- degree(net)
-V(net)$size <- V(net)$Frequency
+V(net)$size <- V(net)$Frequency^2
 V(net)$label <- V(net)$name
-E(net)$width <- E(net)$weight/250
-E(net)$arrow.size <- 15 
+E(net)$width <- E(net)$weight/150
+# E(net)$arrow.size <- 15  # doesnt' seems to have an effect
 
 hchart(net, layout = layout_with_fr)
 ```
+
+The color should be indicate of communities in the network graph, acquired via **cluster_walktrap**. Sadly, while highchart's plot is interactive, I couldn't get the arrow to be shown in the network graph ( to shown where have the individuals been moving).
+
+The Weight options for the width of the lines are manually set to reduce the visibility of less job title changes. Alternative, one could implement a cutoff/threhold value as to when to draw a line connecting the nodes.
+
+The size of the individual nodes are indicative of the population of respective current job title.
+
+Overall, it seems Data Scientist are the core of the network plots, with most of its network coming from data analyst, Software Developer/Software Engineer, and Researcher.
+
+
+# Differences of Percentage in of The Jobtitle of current and past.
+
+If we plot the percentage difference between job title of current and past ( though, not all positions are equal, some roles may be appear more frequency simply due to it being a high competative filed).
+
+```{r}
+t.vertices_dif <- t.vertices_w_current[value!="Not given"] %>%
+  .[,Diff_percent := Current_percent - Previous_percent] %>%
+  .[order(-Diff_percent)] %>%
+  .[, color := colorize(Diff_percent)]
+
+highchart()%>%
+  hc_add_series(t.vertices_dif, "bar", hcaes(x = value, y = Diff_percent, color = color)) %>%
+  hc_xAxis(categories = t.vertices_dif$value) %>%
+  hc_title(text = "Differences of Percentage in of The Jobtitle of current and past")
+```
+
+This shows that the job titles of Data scientist and Scientist/Researcher have been becoming popular overtime, ie, while the percentage of those who once hold title of programmer and data analyst has decreased. I wonder if this means that Kaggle survey respondents have been slowly moving into their field of choice (Data Science) after parting from their past jobs.  
+
 
 
 ## Non Coders & Job Title
@@ -750,12 +1315,11 @@ In both three case, it seems that some Business Analyst, Programmers and Softwar
 
 It seems that these professions are good staging ground for those who are intending venture into Data Science for those who are weak on the codes/programming side. Especially if you are from another field. Although, from what I seen (in Asia) , those Business Analyst roles typically require finance/business background instead of science.
 
-On the other hand, the fabled "manager role" that dont require coding is elusive.
+On the other hand, the fabled "manager role" that dont require coding is elusive where experienced coders migrate to is nowhere to be found.
 
 ## Country vs Compensation Currency, Compensation Amount
 
 ```{r}
-
 # Turning CompensationAmountfrom factor into numeric column
 multipleChoiceResponses$CompensationAmount <- as.numeric(as.character(multipleChoiceResponses$CompensationAmount))
 
@@ -772,7 +1336,10 @@ multipleChoiceResponses[Country=="United States" &
                              Q3=quantile(CompensationAmount, 0.75)
                         ), by=CompensationCurrency] %>%
   .[N>5]
+```
+From the quantile value (Q1 - Q3) in this case, I think one can safetly assume that the salary of those living in US can be changed to USD.
 
+```{r}
 # Change the Compensation Currency of those living in US yet did not select a currency into USD.
 multipleChoiceResponses[!is.na(CompensationAmount) & 
                           is.na(CompensationCurrency) &
@@ -781,7 +1348,8 @@ multipleChoiceResponses[!is.na(CompensationAmount) &
 
 # Converting all curruncies to USD to ease comparison between different currencies
 multipleChoiceResponses<-multipleChoiceResponses[!is.na(CompensationAmount) &
-                                                   !is.na(ExchangeRate),
+                                                   !is.na(ExchangeRate & 
+                                                            CompensationCurrency!= Code),
                                                  m.CompensationUSD := m.CompensationAmount*ExchangeRate] %>%
   # Adapting partial ikleiman's treatment of salary, where if the salary is between 6 and 36 times of the median, it is assumed that the respondant entered a monthly salary, hence, * 12
       # https://www.kaggle.com/ikleiman/data-scientists-salaries-around-the-world
@@ -794,9 +1362,12 @@ multipleChoiceResponses<-multipleChoiceResponses[!is.na(CompensationAmount) &
 
 ```
 
+I adapted ikleiman's treatment of salary to account to account for correction in guessing when survey respondents have inserted their monthly salary instead of per annum. 
+
 ## Individuals Earnings distribution in USD per Country
 
 ```{r}
+# This remove the 5% of head and tail of compensation in USD for various countries
 Individual_Earning.dt <- multipleChoiceResponses %>%
   .[, names(.) %in% c("m.CompensationUSD","EmploymentStatus", "Country"), with = F] %>%
   # Considering only those with non NA compensationAmount
@@ -813,14 +1384,44 @@ Individual_Earning.dt <- multipleChoiceResponses %>%
           q5 = quantile(m.CompensationUSD, 0.05)), by = Country]%>%
   .[m.CompensationUSD<q95, ] %>%
   .[m.CompensationUSD>q5, ]  %>%
-.[order(-med)]
+  .[order(-med)]
 
-# plot of hcboxplot
-hcboxplot(x = Individual_Earning.dt$m.CompensationUSD, var = Individual_Earning.dt$Country) %>%
-  hc_xAxis(labels = list(rotation=0)) %>%
-  hc_yAxis(title = list(text="USD")) %>%
-  hc_title(text = "Boxplot of m.CompensationUSD per country") 
+# # highchart
+# hcboxplot(x = Individual_Earning.dt$m.CompensationUSD, var = Individual_Earning.dt$Country) %>%
+#   hc_xAxis(labels = list(rotation=0)) %>%
+#   hc_yAxis(title = list(text="USD")) %>%
+#   hc_title(text = "Boxplot of m.CompensationUSD per country") 
+
+## gglot 
+fill <- "#4271AE"
+lines <- "#1F3552"
+
+ggplot(Individual_Earning.dt, aes(x = reorder(Country, m.CompensationUSD, median), 
+                                  y = m.CompensationUSD)) +
+        geom_boxplot(colour = lines, fill = fill,
+                     size = 1) +
+        scale_y_continuous(name = "Compensation in USD") +
+        scale_x_discrete(name = "Country") +
+        ggtitle("Boxplot of CompensationUSD by Country") +
+        theme_bw() +
+        theme(panel.grid.major = element_line(colour = "#d3d3d3"),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 14, face = "bold"),
+              axis.title = element_text(face="bold"),
+              axis.text.x = element_text(colour="black", size = 9, angle = 90,
+                                         hjust = 1,  vjust = 0.5),
+              axis.text.y = element_text(colour="black", size = 9),
+              axis.line = element_line(size=0.5, colour = "black"))
 ```
+
+I used ggplot's boxplot here as I couldn't get the highchart's boxplot (hcboxplot)'s to have its categories sorted by median value. 
+
+The ranking of countries slightly differs from that of [ikeiman](https://www.kaggle.com/ikleiman/data-scientists-salaries-around-the-world), probably because of slightly differing processes. While I adapted ikeiman's treatment to account for monthly salary ( ie compensation \times 12 if the value is between 6 and 36 fractions of the median salary.), I also went for a more narrow filter (accepting only those listed in respective local currencies of their home country) and simply applied and 5% cut on head and tail of the distribution.
+
+Hence, the compensations listed here is probably more appropriate to those employed and compensated locally instead of remotely, as we will see in next section, country like Isreal, Ukraine, India bosted a significant number of individual earning foregin currencies
+
 
 ### Number of Individuals earning Foreign Currencies
 
@@ -832,13 +1433,17 @@ Foreign.dt<-multipleChoiceResponses %>%
   # Filtering cases where the CompensationCurrency isn't identical with the Country Currency
   .[CompensationCurrency!= Code] %>%
   .[, .N, by = list(Country)] %>%
-  .[order(-N)] 
+  .[order(-N)] %>%
+  .[, percent:=signif(N/sum(N)*100, 3), ]
 
-highchart() %>%
-  hc_add_series(Foreign.dt, "column", hcaes(x = Country, y = N)) %>%
-  hc_xAxis(categories =Foreign.dt$Country) %>%
-  hc_title(text = "Foreign Currencies Compensation") %>%
-  hc_subtitle(text = "Number of survey respondents earning foreign currencies, all of their compensation currency is listed to be in USD")
+
+highchart() %>%   
+  hc_add_series(Foreign.dt, "column", hcaes(x = Country, y = N), name = "column", colorByPoint = TRUE) %>%
+  hc_add_series(Foreign.dt, "pie", hcaes(name = Country, y = percent), name = "Bars")  %>%  # Axis
+  hc_xAxis(categories = Foreign.dt$Country) %>% #Title & Subtitle
+         hc_title(text = "Number of Individuals earning Foreign Currencies") %>%
+         hc_subtitle(text = paste("Number of survey respondents earning foreign currencies, all of their compensation currency is listed to be in USD"))
+
 
 ## Bootstrep to check the std.error in mean of different groups
 # stat<-function(x, i) {x[i, c(m1 = mean(CompensationAmount))]}
@@ -847,9 +1452,13 @@ highchart() %>%
 
 ```
 
+USD is the most popular foregin currency by far for those who earn foreign currencies. Surprisingly, Ukraine, showed up right after India to as one of the more popular country for its individuals to receive compensation in USD. I wonder if it is because some of the individuals holding top jobs in the country demand salary in USD or that this is a popular practice at certain regions
+
+I think this list has no bearings on whether the jobs are offshored. Data science is still relatively a new field. Many companies (especially those more ambitious local ones) are currently just trying to label new position as data science/analyst when it could have been a statistician/executive job previously.
+
 ## Pay Package
 
-In this section, we restrict ourselves to those living in US to look at their pay and growth
+In this section, we restrict ourselves to examine the paychecks of those living in US. Mainly as to how individual's education, experience and job title influenced their compensation.
 
 ### Experience Growth
 
@@ -894,9 +1503,10 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure) %>%
   hc_subtitle(text = "To facilitate a fair comparison, the figures are drawn only from those fully employed in US, along with trimming of 5% and 95% of the distribution") 
 ```
 
+* There exist a noticably spike between those with experience of 3 to 5 years and 6 to 10 years. This the difference is even more significant for 10+ years, though, those with 1-2 years of experience and the entries level experience are without luck. (If we were to relate compensation to demand, does this implies that the demand at fresh graduates/new entries level have been tamed?)
+
 ### Experience & Education
 
-It seems only reasonable to restrict pay packages to individual country (or cities) and local currency.
 
 
 ```{r}
@@ -944,6 +1554,10 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$Forma
 With regards to education, the level of education for "I did not complete any formal education past high school", "I prefer not to answer" and "NA" is filtered from the plot. All these levels have limited entries
 
 In the case of "without formal education past high school", there is only a single data point at 6-10 years of experience while making $150k PA.
+
+For those with 1-2 years into the field, it seems that the compensation does somewat correlate with the level of education. Though, unfortunately, it seems the effect of education  ( degree level and above) is less pronounce after 6 to 10 years. Perhaps it doesn't pays to be highly educated for a long ran?
+
+Though, please take this with a pinch of salt as DS is a new field, eventually, certain positions may simply require minimun Master's degree to even be considered ( as per other fields, the fault of specialisation we have these days).
 
 ### Experience & Job Title
 
@@ -993,88 +1607,18 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$Curre
   hc_chart(type = "column") # to put box vertical
 ```
 
-### Currency & Remote work
+*You may need to click on the legend on the plot to hide/unhide a certain categories to better identify certain category.*
 
-Having combined the the compensation currency and currency code for supposed country that the respondents are living, I wonder if all these people who are receiving foreign currency were doing mostly remove work?
+While title doesn't seems to be worthly important to learners ( in Mixed Visuallsation - Job Factor section), the respective compensation one receive after years in the industry can be quite different.
 
-Remote can also be related to cloud technologies such as spark, hadoop, AWS. It is likely also essential if one have to deal with big data regularly (over 1TB).
-
-
-```{r}
-multipleChoiceResponses[,.N,by=c("JobSkillImportanceBigData", "RemoteWork")]
-```
-
-```{r}
-schema[Column=="RemoteWork"]$Question
-# multipleChoiceResponses$JobSkillImportanceBigData
-# multipleChoiceResponses$WorkCodeSharing
-# multipleChoiceResponses$WorkDataSharing
+Researcher and Scientist/Researcher seems to have it worst in the early years of their tenure. Although it seems some did make it big after working on it for 10 years. Data Scientist gain in compensation over the years is among the best. Especially considering that the population for Researcher and Machine Learning Engineer are small (and the fact that probably few went so far). 
 
 
-# t.WTF<-multipleChoiceResponses[!is.na(CompensationCurrency)& 
-#                                  CompensationCurrency!= Code &
-#                                  !is.na(RemoteWork) & 
-#                                  Country=="United States",
-#                                list(N=.N,
-#                                     MedPay=median(m.CompensationUSD)), 
-#                                by=c("RemoteWork", "Tenure")] %>%
-#   .[order(-RemoteWork)]
-# 
-# 
-# 
-# t.WTF<-multipleChoiceResponses[!is.na(RemoteWork) & !is.na(Tenure) & Country=="United States",
-#                                list(N=.N,
-#                                     MedPay=median(m.CompensationUSD, na.rm = T)), 
-#                                by=c("RemoteWork", "Tenure")] %>%
-#   .[order(Tenure)]
+## Choropleths Maps {.tabset}
 
 
-t.WTF <- multipleChoiceResponses %>%
-  # Considering only those with non NA compensationAmount
-  .[!is.na(m.CompensationAmount) & 
-      m.CompensationCurrency=="USD" &
-      !m.CompensationAmount==0 &
-      EmploymentStatus == "Employed full-time" &
-      !is.na(RemoteWork) &
-      Country=="United States"] %>%
-  # Additional filtering for popular jobs
-  .[CurrentJobTitleSelect %in% PopularJob,] %>%
-  #Need to be named explicitly since highcharter would label it as "series x"if the column name is NA
-  .[is.na(Tenure), Tenure:= "Not Selected"] %>%
-  .[order(Tenure)] %>%
-  .[, if(.N > 5) .SD, by=c("Tenure")] %>%
-  .[,':='(q95= quantile(m.CompensationUSD, 0.95),
-          med= median(m.CompensationUSD),
-          q5 = quantile(m.CompensationUSD, 0.05)), by = c("Tenure","RemoteWork")]%>%
-  .[m.CompensationUSD<q95, ] %>%
-  .[m.CompensationUSD>q5, ] 
+Some small correction for Countrycode that is left as "NA" from the custom datasets I used.
 
-# plot of hcboxplot
-hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure, var2 = t.WTF$RemoteWork,
-          outliers = FALSE) %>% 
-  hc_chart(type = "column") %>% # to put box vertical
-hc_title(text = "Currency & Remote work") 
-
-# hchart(t.WTF, type="column", hcaes(x = Tenure, y = m.CompensationUSD, group = RemoteWork)) %>%
-# hc_title(text = "Currency & Remote work") 
-
-
-```
-## Choropleths Map
-
-### Currency Codes & Country Name & highcharter Map
-
-```{r}
-#loading world-geojson that is part of highcharter
-data(worldgeojson)
-
-#plotting for highcharter map
-hcmap(mapData = worldgeojson, 
-      download_map_data=F, data = Currency2CountryConversion, value = "ExchangeRate",
-      joinBy = c("iso-a2", "CountryCode"), name = "Demography",
-      dataLabels = list(enabled = F, format = '{point.name}'), borderWidth = 1,
-      tooltip = list(valueDecimals = 2, valuePrefix = "$", valueSuffix = " USD")) 
-```
 
 
 ```{r}
@@ -1085,24 +1629,57 @@ multipleChoiceResponses %>%
   .[Country=="Iran", CountryCode:="IR"]%>%
   .[Country=="Belarus", CountryCode:="BR"]
 
+```
+
+###  Demographic Map
+
+* Ncount - Indicative of number of individulas 
+* AgeMedian - Median Age of the population
+* WorkingExpMedian - Depict the median experience of tenure/working
+* WorkingP(working Population) - The percentage of those who are **"Employed full-time"**, **"Independent contractor, freelancer, or self-employed"** and **"Employed part-time"**
+* LookingForJob - The Percentage of those who are **"Not employed, but looking for work"**
+*StudentP - The percentage of those who labeled themselves as student
+
+
+```{r}
 # Aggregate the demographics for countries
 t.cut<-multipleChoiceResponses[!is.na(Country),] %>%
   .[,.(NCount=.N, 
-        AgeMedian = as.numeric(median(Age, na.rm=T)),
-        CareerSwitcherP=signif(as.numeric(mean(CareerSwitcher=="Yes", na.rm=T)),2),
+       AgeMedian = as.numeric(median(Age, na.rm=T)),
+       WorkingExpMedian= signif(median(m.Experience, na.rm = T),2),
+       CareerSwitcherP=signif(as.numeric(mean(CareerSwitcher=="Yes", na.rm=T)),2),
        WorkingP=signif(mean(EmploymentStatus=="Employed full-time"|
-                       EmploymentStatus=="Independent contractor, freelancer, or self-employed"|EmploymentStatus=="Employed part-time", na.rm=T),2),
+                              EmploymentStatus=="Independent contractor, freelancer, or self-employed"|EmploymentStatus=="Employed part-time", na.rm=T),2),
        LookingForJobP=signif(mean(EmploymentStatus=="Not employed, but looking for work", na.rm=T),1),
-       StudentP=signif(mean(StudentStatus=="Yes", na.rm=T),2),
-       WorkingExpMedian= signif(median(m.Experience, na.rm = T),2)
-   ), 
-   by=c("CountryCode", "Country")]
+       StudentP=signif(mean(StudentStatus=="Yes", na.rm=T),2)
+       ), 
+  by=c("CountryCode", "Country")]
       
-# Plotting for highcharter map
-hcmap(mapData = worldgeojson, 
-      download_map_data=F, data = t.cut, value = "NCount",
-      joinBy = c("iso-a2", "CountryCode"), name = "Demography",
-      dataLabels = list(enabled = F, format = '{point.name}'), borderWidth = 1) %>%
+t.cut$iso2<- t.cut$CountryCode
+
+
+# # # Plotting for highcharter map
+# hcmap(mapData = worldgeojson,
+#       # download_map_data=FALSE,
+#       data = t.cut, value = "NCount",
+#       joinBy = c("iso-a2", "CountryCode"), name = "Demography",
+#       dataLabels = list(enabled = F, format = '{point.name}'), borderWidth = 1) %>%
+# hc_tooltip(useHTML = TRUE,
+#              headerFormat = "<table>",
+#              pointFormat = paste("<tr><th colspan=\"1\"><td>{point.Country}</td></th></tr>",
+#                                  "<tr><th>NCount<td>{point.NCount}</td></th></tr>",
+#                                  "<tr><th>AgeMedian</th><td>{point.AgeMedian}</td></tr>",
+#                                  "<tr><th>WorkingP</th><td>{point.WorkingP}</td></tr>",
+#                                  "<tr><th>CareerSwitcherP</th><td>{point.CareerSwitcherP}</td></tr>",
+#                                  "<tr><th>LookingForJobP</th><td>{point.LookingForJobP}</td></tr>",
+#                                "<tr><th>WorkingExpMedian</th><td>{point.WorkingExpMedian}</td></tr>"),
+#              footerFormat = "</table>")
+
+
+highchart()%>%
+  hc_add_series_map(worldgeojson, df = t.cut, value = "LookingForJobP", joinBy = "iso2",
+                    dataLabels = list(enabled = TRUE,
+                                      format = '{point.name}'), name = "Demography") %>%
 hc_tooltip(useHTML = TRUE,
              headerFormat = "<table>",
              pointFormat = paste("<tr><th colspan=\"1\"><td>{point.Country}</td></th></tr>",
@@ -1113,5 +1690,45 @@ hc_tooltip(useHTML = TRUE,
                                  "<tr><th>LookingForJobP</th><td>{point.LookingForJobP}</td></tr>",
                                "<tr><th>WorkingExpMedian</th><td>{point.WorkingExpMedian}</td></tr>"),
              footerFormat = "</table>")
+
+```
+
+###  Compensation and JobTitle Percentage Map 
+
+
+
+```{r}
+# Aggregate the demographics for countries
+t.cut<-multipleChoiceResponses[!is.na(Country),] %>%
+  .[,.(NCount=.N, 
+       CompensationLocal_Median = as.numeric(median(m.CompensationLocal, na.rm=T)),
+       CompensationLocal_Q3= signif(quantile(m.CompensationLocal, 0.75, na.rm = T),2),
+       CompensationLocal_Q1=signif(quantile(m.CompensationLocal,0.25, na.rm=T),2),
+       CompensationUSD_Median = as.numeric(median(m.CompensationUSD, na.rm=T)),
+       CompensationUSD_Q3=signif(quantile(m.CompensationUSD, 0.75, na.rm = T),2),
+       CompensationUSD_Q1=signif(quantile(m.CompensationUSD,0.25, na.rm=T),2),
+       DS_P=signif(mean(CurrentJobTitleSelect=="Data Scientist", na.rm=T),2),
+       Research_P=signif(mean(CurrentJobTitleSelect=="Researcher" | CurrentJobTitleSelect=="Scientist/Researcher ", na.rm=T),1)
+       ), 
+  by=c("CountryCode", "Country")]
+      
+t.cut$iso2<- t.cut$CountryCode
+
+highchart()%>%
+  hc_add_series_map(worldgeojson, df = t.cut, value = "CompensationLocal_Median", joinBy = "iso2",
+                    dataLabels = list(enabled = TRUE,
+                                      format = '{point.name}'), 
+                    name = "Compensation and JobTitle Percentage Map") %>%
+hc_tooltip(useHTML = TRUE,
+             headerFormat = "<table>",
+             pointFormat = paste("<tr><th colspan=\"1\"><td>{point.Country}</td></th></tr>",
+                                 "<tr><th>LocalPay.Med<td>{point.CompensationLocal_Median}</td></th></tr>",
+                              "<tr><th>LocalPay.Q3<td>{point.CompensationLocal_Q3}</td></th></tr>",
+                                 "<tr><th>LocalPay.Q1</th><td>{point.CompensationLocal_Q1}</td></tr>",
+                                 "<tr><th>USDPay.Med</th><td>{point.CompensationUSD_Median}</td></tr>",
+                                 "<tr><th>DS.P</th><td>{point.DS_P}</td></tr>",
+                               "<tr><th>Research.P</th><td>{point.Research_P}</td></tr>"),
+             footerFormat = "</table>")
+
 
 ```
