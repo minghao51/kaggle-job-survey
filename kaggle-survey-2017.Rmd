@@ -6,7 +6,7 @@ output:
     toc: true
     toc_depth: 3
     toc_float: true
-    df_print: tibble
+    df_print: paged
     number_sections: yes
     code_folding: hide
 ---
@@ -674,7 +674,9 @@ highchart() %>%
 
 Wow, most people saw a 20% increase in salary over 3 years. Guess Data science is indeed a field in demand.
 
-
+<br/>
+<hr/>
+<br/>
 
 ## Remote Work
 
@@ -685,6 +687,10 @@ hchart(multipleChoiceResponses$RemoteWork, na.rm =T)%>%
                            eval(schema[Column=="RemoteWork", Question])
                            ))
 ```
+
+<br/>
+<hr/>
+<br/>
 
 ## Currency
 
@@ -738,6 +744,10 @@ multipleChoiceResponses[, c("Code", "CompensationCurrency"):=lapply(.SD, as.char
 # unique(multipleChoiceResponses[CompensationCurrency==Code,.(CompensationCurrency, Code)])
 ```
 
+<br/>
+<hr/>
+<br/>
+
 ### Currency Codes & Map
 
 ```{r}
@@ -761,6 +771,9 @@ highchart()%>%
                                       format = '{point.name}'))
 ```
 
+<br/>
+<hr/>
+<br/>
 
 ## Learning Platform Select
 
@@ -781,6 +794,10 @@ hchart(Agg_LearningPlatformSelect, type="column", hcaes(x = value, y = N, group 
 ```
 
 Obviously, as this is a survey done on Kaggle, there would be a huge bias towards Kaggle. Other popular medium of learning are Online Courses, Personal Projects, Blogs and Youtube Videos.
+
+<br/>
+<hr/>
+<br/>
 
 
 ## Proving your worth
@@ -825,6 +842,8 @@ highchart() %>%
 
 Evidently, the majority learners think that working experience is the most important methods to prove their knowledge of DS/ML. This is followed by Kaggle competitions, Online courses and Github Portfolio. 
 
+<br/>
+
 ### Proven Knowledge FreeForm
 
 ```{r}
@@ -837,6 +856,11 @@ wordcloud(ProveKnowledge_FreeForm$term, ProveKnowledge_FreeForm$num, max.words =
 Its equivalent freeform form of data, however, are overwhelming pointing towards projects. Although limited people proceed to fill the free form data.
 
 I think this previous selections has  for proven knowledge has limited the respondents to choose only amount the listed choices (ie, bias in the sense that most people are unlikely to select "Other" option and fill in projects, instead prefer to choose amount the available options). Among the choice I think that are missing from the list are projects, open-sourced packages contributions, blogs and publication.
+
+
+<br/>
+<hr/>
+<br/>
 
 ## Algorithm Understanding
 
@@ -883,6 +907,10 @@ highchart() %>%
 ```
 
 
+<br/>
+<hr/>
+<br/>
+
 ## Impactful Algorithm FreeForm
 
 Question
@@ -904,6 +932,10 @@ wordcloud(ImpactfulAlgorithm_FreeForm$term, ImpactfulAlgorithm_FreeForm$num, max
 
 Well regression is still the most impactful algorithm, I guess it pays to be simple and easily interpretable. All other popular algorithm such as random forest, neural network, logistic regression are also mentioned.
 
+<br/>
+<hr/>
+<br/>
+
 # Mixed Visualisation
 
 Most of the kernals that I had seen looks to explore the surveys results with barcharts. While it easily shows which are the most popular factor, the bar chart may appear misleading if there are less people submitting response for a particular section, or that the respondents are divided, dividing into two extremes. Some respondents may just not be familier with a particular option.
@@ -911,6 +943,10 @@ Most of the kernals that I had seen looks to explore the surveys results with ba
 I attributed each availabe factor to a linear scale (not that it has to be linear), such a that for a 3 factor list, it would be considered as 0, 1, 2 instead, the higher number are giving to a more favourable condition ( the higher the better). 
 
 Also, since the list of questions are identical for a particular extraction of datasets ( ie Job Factor, I will just adapt a random one of the exact question from the scheme to depict the question clearly).
+
+<br/>
+<hr/>
+<br/>
 
 ## Job Factor
 
@@ -981,6 +1017,10 @@ Interestingly, while the bar chart shows that company/funding is also rather imp
 
 Overall, I think the spine plot better depicts Learners' preferance for opportunities in Learning, Office, Salary, Languages and Management. Value concepts and abtracts notions such as diversity and leader reputation are second to their consideration. This seems better comfort to the my normal expectations.
 
+<br/>
+<hr/>
+<br/>
+
 ## Learning Platform Usefulness
 
 ```{r}
@@ -1025,6 +1065,10 @@ highchart() %>%
 * Projects are the most useful, followed by Course. Then, we have Kaggle that is tied with SO at 1.61 score.
 * Tutoring is ranked quite high, despite its small population
 
+<br/>
+<hr/>
+<br/>
+
 ## Work Tools Frequency
 
 ```{r}
@@ -1067,14 +1111,24 @@ highchart() %>%
 Although Python and R proved to be most popular options depicted in the bar chart, the rank with the AvgScore would better illustrate the usefulness of a particular worktool.
 
 By the ranks
+
 1. Unix
+
 2. SQL
+
 3. Python
+
 4. Select
+
 5. Jupyter
+
 6. R
 
 I'm rather surprise to see "Select" here. Especially when it scored rather low on the WorkMethodsFrequency.
+
+<br/>
+<hr/>
+<br/>
 
 ## Job Skill Importance
 
@@ -1115,11 +1169,20 @@ highchart() %>%
 
 
 Importance by the ranks of Average Score.
+
 1. Python
+
 2. Stats
+
 3. Visualisations
+
 4. SQL
+
 5. R
+
+<br/>
+<hr/>
+<br/>
 
 
 ## Work Methods Frequency
@@ -1168,6 +1231,11 @@ By the ranks of Average Score.
 4. LogisticRegression  - tied 
 
 Not sure what to make of "Select" low average score, perhaps it is just not popular with worker?
+
+
+<br/>
+<hr/>
+<br/>
 
 # Interesting combination
 
@@ -1251,6 +1319,11 @@ The size of the individual nodes are indicative of the population of respective 
 Overall, it seems Data Scientist are the core of the network plots, with most of its network coming from data analyst, Software Developer/Software Engineer, and Researcher.
 
 
+<br/>
+<hr/>
+<br/>
+
+
 # Differences of Percentage in of The Jobtitle of current and past.
 
 If we plot the percentage difference between job title of current and past ( though, not all positions are equal, some roles may be appear more frequency simply due to it being a high competative filed).
@@ -1270,6 +1343,10 @@ highchart()%>%
 This shows that the job titles of Data scientist and Scientist/Researcher have been becoming popular overtime, ie, while the percentage of those who once hold title of programmer and data analyst has decreased. I wonder if this means that Kaggle survey respondents have been slowly moving into their field of choice (Data Science) after parting from their past jobs.  
 
 
+<br/>
+<hr/>
+<br/>
+
 
 ## Non Coders & Job Title
 
@@ -1287,6 +1364,11 @@ Well, it seems close to half of the Software Enginer dont write codes? That's a 
 
 In case for Business Analyst and Data Analyst, the amount of non coders could maybe be attributed to their dealing with other statistical software. Perhaps some of the jobs still involve around good old excel.
 
+
+
+<br/>
+<hr/>
+<br/>
 
 ### Non Coders and their career
 
@@ -1316,6 +1398,11 @@ In both three case, it seems that some Business Analyst, Programmers and Softwar
 It seems that these professions are good staging ground for those who are intending venture into Data Science for those who are weak on the codes/programming side. Especially if you are from another field. Although, from what I seen (in Asia) , those Business Analyst roles typically require finance/business background instead of science.
 
 On the other hand, the fabled "manager role" that dont require coding is elusive where experienced coders migrate to is nowhere to be found.
+
+
+<br/>
+<hr/>
+<br/>
 
 ## Country vs Compensation Currency, Compensation Amount
 
@@ -1363,6 +1450,11 @@ multipleChoiceResponses<-multipleChoiceResponses[!is.na(CompensationAmount) &
 ```
 
 I adapted ikleiman's treatment of salary to account to account for correction in guessing when survey respondents have inserted their monthly salary instead of per annum. 
+
+
+<br/>
+<hr/>
+<br/>
 
 ## Individuals Earnings distribution in USD per Country
 
@@ -1423,6 +1515,11 @@ The ranking of countries slightly differs from that of [ikeiman](https://www.kag
 Hence, the compensations listed here is probably more appropriate to those employed and compensated locally instead of remotely, as we will see in next section, country like Isreal, Ukraine, India bosted a significant number of individual earning foregin currencies
 
 
+<br/>
+<hr/>
+<br/>
+
+
 ### Number of Individuals earning Foreign Currencies
 
 ```{r}
@@ -1455,6 +1552,11 @@ highchart() %>%
 USD is the most popular foregin currency by far for those who earn foreign currencies. Surprisingly, Ukraine, showed up right after India to as one of the more popular country for its individuals to receive compensation in USD. I wonder if it is because some of the individuals holding top jobs in the country demand salary in USD or that this is a popular practice at certain regions
 
 I think this list has no bearings on whether the jobs are offshored. Data science is still relatively a new field. Many companies (especially those more ambitious local ones) are currently just trying to label new position as data science/analyst when it could have been a statistician/executive job previously.
+
+
+<br/>
+<hr/>
+<br/>
 
 ## Pay Package
 
@@ -1504,6 +1606,11 @@ hcboxplot(x = t.WTF$m.CompensationAmount, var = t.WTF$Tenure) %>%
 ```
 
 * There exist a noticably spike between those with experience of 3 to 5 years and 6 to 10 years. This the difference is even more significant for 10+ years, though, those with 1-2 years of experience and the entries level experience are without luck. (If we were to relate compensation to demand, does this implies that the demand at fresh graduates/new entries level have been tamed?)
+
+
+<br/>
+<hr/>
+<br/>
 
 ### Experience & Education
 
@@ -1559,9 +1666,13 @@ For those with 1-2 years into the field, it seems that the compensation does som
 
 Though, please take this with a pinch of salt as DS is a new field, eventually, certain positions may simply require minimun Master's degree to even be considered ( as per other fields, the fault of specialisation we have these days).
 
+
+<br/>
+<hr/>
+<br/>
+
 ### Experience & Job Title
 
-Salary with respect to job title and tenure
 
 ```{r}
 # limiting to top 5 most popular job title
@@ -1613,6 +1724,11 @@ While title doesn't seems to be worthly important to learners ( in Mixed Visuall
 
 Researcher and Scientist/Researcher seems to have it worst in the early years of their tenure. Although it seems some did make it big after working on it for 10 years. Data Scientist gain in compensation over the years is among the best. Especially considering that the population for Researcher and Machine Learning Engineer are small (and the fact that probably few went so far). 
 
+
+
+<br/>
+<hr/>
+<br/>
 
 ## Choropleths Maps {.tabset}
 
