@@ -3,3 +3,23 @@ warnings_are_errors: true
 sudo: required
 
 cache: packages
+
+r_packages:
+  - stringr
+  - lubridate
+  - purrr
+  - tidyverse
+  - data.table
+  - lubridat
+  - ggvis
+  - ggplot2
+  - forcats
+  - ggmap
+  - highcharter
+  - broom
+  - plotly
+  - quanteda
+  - wordcloud
+  - slam
+  - leaflet
+  - igraph
